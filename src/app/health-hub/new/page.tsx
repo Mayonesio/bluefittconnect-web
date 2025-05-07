@@ -16,7 +16,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { ArrowLeft, Droplet, Sun, Wind, Tractor, Image as ImageIcon } from 'lucide-react';
+import { ArrowLeft, Heart, Brain, Utensils, ShieldCheck, Image as ImageIcon, Barbell } from 'lucide-react';
 import Link from "next/link";
 import {
   Select,
@@ -28,7 +28,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 
 
-const blogPostSchema = z.object({
+const healthArticleSchema = z.object({
   title: z.string().min(5, "Title must be at least 5 characters.").max(150, "Title is too long."),
   slug: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Slug must be lowercase alphanumeric with hyphens."),
   category: z.string().min(1, "Category is required."),
@@ -38,19 +38,19 @@ const blogPostSchema = z.object({
   author: z.string().min(2, "Author name is required."),
 });
 
-type BlogPostFormValues = z.infer<typeof blogPostSchema>;
+type HealthArticleFormValues = z.infer<typeof healthArticleSchema>;
 
 const categories = [
-  { value: "irrigation-tips", label: "Irrigation Tips", icon: Droplet },
-  { value: "technology", label: "Technology", icon: Tractor },
-  { value: "best-practices", label: "Best Practices", icon: Sun },
-  { value: "sustainability", label: "Sustainability", icon: Wind },
+  { value: "fitness", label: "Fitness", icon: Barbell }, // Replaced Droplet with Barbell
+  { value: "nutrition", label: "Nutrition", icon: Utensils }, // Replaced Tractor with Utensils
+  { value: "wellness", label: "Wellness", icon: Heart }, // Replaced Sun with Heart
+  { value: "mental-health", label: "Mental Health", icon: Brain }, // Replaced Wind with Brain
 ];
 
-export default function NewBlogPostPage() {
+export default function NewHealthArticlePage() {
   const { toast } = useToast();
-  const form = useForm<BlogPostFormValues>({
-    resolver: zodResolver(blogPostSchema),
+  const form = useForm<HealthArticleFormValues>({
+    resolver: zodResolver(healthArticleSchema),
     defaultValues: {
       title: "",
       slug: "",
@@ -62,10 +62,10 @@ export default function NewBlogPostPage() {
     },
   });
 
-  function onSubmit(data: BlogPostFormValues) {
+  function onSubmit(data: HealthArticleFormValues) {
     console.log(data);
     toast({
-      title: "Blog Post Submitted!",
+      title: "Health Article Submitted!",
       description: `"${data.title}" has been successfully submitted. (This is a demo, no data was actually saved).`,
     });
     // Here you would typically send data to your backend
@@ -77,13 +77,13 @@ export default function NewBlogPostPage() {
     <div className="flex flex-col gap-8">
       <header className="flex items-center gap-4">
         <Button variant="outline" size="icon" asChild>
-          <Link href="/blog">
+          <Link href="/health-hub">
             <ArrowLeft className="h-4 w-4" />
-            <span className="sr-only">Back to Blog</span>
+            <span className="sr-only">Back to Health Hub</span>
           </Link>
         </Button>
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">Create New Blog Post</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">Create New Health Article</h1>
           <p className="text-muted-foreground">
             Fill in the details below to publish a new article.
           </p>
@@ -94,8 +94,8 @@ export default function NewBlogPostPage() {
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
           <Card>
             <CardHeader>
-              <CardTitle>Post Details</CardTitle>
-              <CardDescription>Provide the main information for your blog post.</CardDescription>
+              <CardTitle>Article Details</CardTitle>
+              <CardDescription>Provide the main information for your health article.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <FormField
@@ -105,7 +105,7 @@ export default function NewBlogPostPage() {
                   <FormItem>
                     <FormLabel>Title</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter post title" {...field} />
+                      <Input placeholder="Enter article title" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -119,7 +119,7 @@ export default function NewBlogPostPage() {
                   <FormItem>
                     <FormLabel>Slug</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g., my-awesome-post" {...field} />
+                      <Input placeholder="e.g., my-awesome-article" {...field} />
                     </FormControl>
                     <FormDescription>
                       This will be part of the URL. Use lowercase letters, numbers, and hyphens.
@@ -184,7 +184,7 @@ export default function NewBlogPostPage() {
                       </div>
                     </FormControl>
                     <FormDescription>
-                      Link to an image that will be featured with your post.
+                      Link to an image that will be featured with your article.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -195,7 +195,7 @@ export default function NewBlogPostPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Post Content</CardTitle>
+              <CardTitle>Article Content</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
               <FormField
@@ -206,7 +206,7 @@ export default function NewBlogPostPage() {
                     <FormLabel>Excerpt</FormLabel>
                     <FormControl>
                       <Textarea
-                        placeholder="A short summary of your post (max 300 characters)"
+                        placeholder="A short summary of your article (max 300 characters)"
                         className="resize-none"
                         rows={3}
                         {...field}
@@ -225,7 +225,7 @@ export default function NewBlogPostPage() {
                     <FormLabel>Main Content</FormLabel>
                     <FormControl>
                       <Textarea
-                        placeholder="Write your full blog post here. Markdown is supported."
+                        placeholder="Write your full article here. Markdown is supported."
                         className="min-h-[300px] resize-y"
                         {...field}
                       />
@@ -242,9 +242,9 @@ export default function NewBlogPostPage() {
 
           <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" asChild>
-              <Link href="/blog">Cancel</Link>
+              <Link href="/health-hub">Cancel</Link>
             </Button>
-            <Button type="submit">Publish Post</Button>
+            <Button type="submit">Publish Article</Button>
           </div>
         </form>
       </Form>

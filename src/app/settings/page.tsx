@@ -41,11 +41,11 @@ export default function SettingsPage() {
               </div>
               <div className="space-y-1">
                 <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" defaultValue="admin@agriconnect.pro" />
+                <Input id="email" type="email" defaultValue="admin@blufitt.pro" />
               </div>
               <div className="space-y-1">
                 <Label htmlFor="company">Company (Optional)</Label>
-                <Input id="company" defaultValue="AgriConnect Solutions" />
+                <Input id="company" defaultValue="Blufitt connect Solutions" />
               </div>
               <Button className="mt-4">Save Changes</Button>
             </CardContent>
@@ -88,23 +88,23 @@ export default function SettingsPage() {
               <div className="flex items-center justify-between space-x-2 p-4 border rounded-md">
                 <div>
                   <Label htmlFor="email-notifications" className="font-medium">Email Notifications</Label>
-                  <p className="text-sm text-muted-foreground">Receive updates about proformas and critical system alerts.</p>
+                  <p className="text-sm text-muted-foreground">Receive updates about your activity and critical system alerts.</p>
                 </div>
                 <Switch id="email-notifications" defaultChecked />
               </div>
               <div className="flex items-center justify-between space-x-2 p-4 border rounded-md">
                  <div>
-                  <Label htmlFor="blog-updates" className="font-medium">Blog Updates</Label>
-                  <p className="text-sm text-muted-foreground">Get notified when new blog articles are published.</p>
+                  <Label htmlFor="health-hub-updates" className="font-medium">Health Hub Updates</Label>
+                  <p className="text-sm text-muted-foreground">Get notified when new health articles are published.</p>
                 </div>
-                <Switch id="blog-updates" />
+                <Switch id="health-hub-updates" />
               </div>
                <div className="flex items-center justify-between space-x-2 p-4 border rounded-md">
                  <div>
-                  <Label htmlFor="product-alerts" className="font-medium">Product Alerts</Label>
-                  <p className="text-sm text-muted-foreground">Receive notifications for new products or special offers.</p>
+                  <Label htmlFor="workout-alerts" className="font-medium">Workout Plan Alerts</Label>
+                  <p className="text-sm text-muted-foreground">Receive notifications for new workout plans or challenges.</p>
                 </div>
-                <Switch id="product-alerts" defaultChecked/>
+                <Switch id="workout-alerts" defaultChecked/>
               </div>
               <Button className="mt-4">Save Notification Preferences</Button>
             </CardContent>

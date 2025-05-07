@@ -1,39 +1,39 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { ShoppingBag, FileText, BookOpen, ArrowRight } from 'lucide-react';
+import { Dumbbell, TrendingUp, BookOpen, ArrowRight, HeartPulse } from 'lucide-react';
 
 export default function DashboardPage() {
   const featureCards = [
     {
-      title: "Product Catalog",
-      description: "Explore and manage your agricultural products.",
-      icon: ShoppingBag,
-      href: "/products",
-      cta: "View Products",
+      title: "Workout Plans",
+      description: "Discover and follow personalized workout routines.",
+      icon: Dumbbell,
+      href: "/workout-plans",
+      cta: "Explore Plans",
     },
     {
-      title: "Proformas",
-      description: "Create and track proforma invoices for your clients.",
-      icon: FileText,
-      href: "/proformas",
-      cta: "Manage Proformas",
+      title: "Progress Tracking",
+      description: "Monitor your achievements and stay motivated.",
+      icon: TrendingUp,
+      href: "/activity-log",
+      cta: "Track Progress",
     },
     {
-      title: "Blog Management",
-      description: "Publish and manage articles on agricultural irrigation.",
-      icon: BookOpen,
-      href: "/blog",
-      cta: "Go to Blog",
+      title: "Health Hub",
+      description: "Access curated articles on fitness, nutrition, and wellness.",
+      icon: HeartPulse, // Changed from BookOpen for more fitness vibe
+      href: "/health-hub",
+      cta: "Read Articles",
     },
   ];
 
   return (
     <div className="flex flex-col gap-8">
       <header className="space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight text-foreground">Welcome to AgriConnect Pro</h1>
+        <h1 className="text-3xl font-bold tracking-tight text-foreground">Welcome to Blufitt connect</h1>
         <p className="text-muted-foreground">
-          Your central hub for managing agricultural products, proformas, and blog content.
+          Your central hub for connecting with your fitness goals and tracking progress.
         </p>
       </header>
 
@@ -59,11 +59,10 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      {/* Placeholder for future dashboard elements like charts or recent activity */}
       <Card>
         <CardHeader>
           <CardTitle className="text-xl font-semibold">Recent Activity</CardTitle>
-          <CardDescription>Overview of recent proformas and blog posts.</CardDescription>
+          <CardDescription>Overview of your recent workouts and health logs.</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-center h-40 border-2 border-dashed rounded-md">

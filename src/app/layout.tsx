@@ -15,8 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'AgriConnect Pro',
-  description: 'Manage agricultural products, proformas, and blog content with AgriConnect Pro.',
+  title: 'Blufitt connect',
+  description: 'Connect with your fitness goals and track your progress with Blufitt connect.',
   icons: {
     icon: '/favicon.ico', // Assuming a favicon might be added later
   },

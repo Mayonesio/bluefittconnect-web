@@ -7,13 +7,13 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
 } from '@/components/ui/sidebar';
-import { ShoppingBag, FileText, BookOpen, LayoutDashboard } from 'lucide-react'; // Changed Home to LayoutDashboard
+import { Dumbbell, TrendingUp, HeartPulse, LayoutDashboard } from 'lucide-react'; // Updated icons
 
 const navItems = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/products', label: 'Product Catalog', icon: ShoppingBag },
-  { href: '/proformas', label: 'Proformas', icon: FileText },
-  { href: '/blog', label: 'Blog', icon: BookOpen }, // Changed to Blog from Blog Management for brevity
+  { href: '/workout-plans', label: 'Workout Plans', icon: Dumbbell }, // Changed from Product Catalog
+  { href: '/activity-log', label: 'Activity Log', icon: TrendingUp }, // Changed from Proformas
+  { href: '/health-hub', label: 'Health Hub', icon: HeartPulse }, // Changed from Blog
 ];
 
 export default function SidebarNavItems() {

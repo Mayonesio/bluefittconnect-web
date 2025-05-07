@@ -38,7 +38,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
           <SidebarHeader className="p-4 flex items-center justify-center group-data-[state=expanded]:justify-between border-b border-sidebar-border">
             <Link href="/" className="flex items-center gap-2 group-data-[state=collapsed]:hidden">
               <Logo className="h-8 w-auto text-sidebar-primary" />
-              <span className="font-semibold text-lg">AgriConnect Pro</span>
+              <span className="font-semibold text-lg">Blufitt connect</span>
             </Link>
              <Link href="/" className="hidden items-center gap-2 group-data-[state=collapsed]:flex">
               <Logo className="h-8 w-8 text-sidebar-primary" />
@@ -73,7 +73,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
                 <Button variant="ghost" size="icon" className="rounded-full">
                   <Avatar className="h-9 w-9">
                     <AvatarImage src="https://picsum.photos/seed/user/50/50" alt="User Avatar" data-ai-hint="user avatar" />
-                    <AvatarFallback>AP</AvatarFallback>
+                    <AvatarFallback>BC</AvatarFallback>
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
