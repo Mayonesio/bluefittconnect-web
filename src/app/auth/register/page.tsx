@@ -46,6 +46,7 @@ export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  // This useEffect handles redirecting if already logged in when page loads
   useEffect(() => {
     if (!authLoading && user) {
       const redirectUrl = searchParams.get("redirect") || "/";
@@ -85,12 +86,22 @@ export default function RegisterPage() {
     }
     setIsLoading(true);
     try {
-      await register(data);
-      toast({
-        title: "¡Registro Exitoso!",
-        description: "Tu cuenta ha sido creada. Bienvenido a Blufitt Connect.",
-      });
-      // Redirection will be handled by the useEffect hook watching `user` and `authLoading`
+      const firebaseUser = await register(data);
+      if (firebaseUser) {
+        toast({
+          title: "¡Registro Exitoso!",
+          description: "Tu cuenta ha sido creada. Bienvenido a Blufitt Connect.",
+        });
+        const redirectUrl = searchParams.get("redirect") || "/";
+        router.push(redirectUrl); // Explicit redirect
+      } else {
+         // Fallback
+        toast({
+          title: "Error de Registro",
+          description: "No se pudo completar el registro.",
+          variant: "destructive",
+        });
+      }
     } catch (error) {
       const authError = error as AuthError;
       let errorMessage = "Error al registrar. Por favor, inténtalo de nuevo.";
@@ -124,12 +135,22 @@ export default function RegisterPage() {
     }
     setIsGoogleLoading(true);
     try {
-      await signInWithGoogle(); 
-      toast({
-        title: "¡Registro con Google Exitoso!",
-        description: "Tu cuenta ha sido creada con Google. Bienvenido a Blufitt Connect.",
-      });
-       // Redirection will be handled by the useEffect hook watching `user` and `authLoading`
+      const firebaseUser = await signInWithGoogle(); 
+      if (firebaseUser) {
+        toast({
+          title: "¡Registro con Google Exitoso!",
+          description: "Tu cuenta ha sido creada con Google. Bienvenido a Blufitt Connect.",
+        });
+        const redirectUrl = searchParams.get("redirect") || "/";
+        router.push(redirectUrl); // Explicit redirect
+      } else {
+        // Fallback
+        toast({
+          title: "Error de Registro con Google",
+          description: "No se pudo registrar con Google. Inténtalo de nuevo.",
+          variant: "destructive",
+        });
+      }
     } catch (error) {
       const authError = error as AuthError;
       let errorMessage = "Error al registrar con Google. Inténtalo de nuevo.";

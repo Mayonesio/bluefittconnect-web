@@ -42,6 +42,7 @@ export default function LoginPage() {
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
+  // This useEffect handles redirecting if already logged in when page loads
   useEffect(() => {
     if (!authLoading && user) {
       const redirectUrl = searchParams.get("redirect") || "/";
@@ -80,12 +81,22 @@ export default function LoginPage() {
     }
     setIsLoading(true);
     try {
-      await login(data);
-      toast({
-        title: "¡Bienvenido de Nuevo!",
-        description: "Has iniciado sesión correctamente.",
-      });
-      // Redirection will be handled by the useEffect hook watching `user` and `authLoading`
+      const firebaseUser = await login(data);
+      if (firebaseUser) {
+        toast({
+          title: "¡Bienvenido de Nuevo!",
+          description: "Has iniciado sesión correctamente.",
+        });
+        const redirectUrl = searchParams.get("redirect") || "/";
+        router.push(redirectUrl); // Explicit redirect
+      } else {
+        // Fallback, though login should throw on failure
+         toast({
+          title: "Error de Inicio de Sesión",
+          description: "No se pudo iniciar sesión. Verifica tus credenciales.",
+          variant: "destructive",
+        });
+      }
     } catch (error) {
       const authError = error as AuthError;
       let errorMessage = "Error al iniciar sesión. Por favor, verifica tus credenciales.";
@@ -117,12 +128,22 @@ export default function LoginPage() {
     }
     setIsGoogleLoading(true);
     try {
-      await signInWithGoogle();
-      toast({
-        title: "¡Bienvenido!",
-        description: "Has iniciado sesión correctamente con Google.",
-      });
-      // Redirection will be handled by the useEffect hook watching `user` and `authLoading`
+      const firebaseUser = await signInWithGoogle();
+      if (firebaseUser) {
+        toast({
+          title: "¡Bienvenido!",
+          description: "Has iniciado sesión correctamente con Google.",
+        });
+        const redirectUrl = searchParams.get("redirect") || "/";
+        router.push(redirectUrl); // Explicit redirect
+      } else {
+        // Fallback
+        toast({
+          title: "Error de Inicio de Sesión con Google",
+          description: "No se pudo iniciar sesión con Google. Inténtalo de nuevo.",
+          variant: "destructive",
+        });
+      }
     } catch (error) {
       const authError = error as AuthError;
       let errorMessage = "Error al iniciar sesión con Google. Inténtalo de nuevo.";
