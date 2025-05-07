@@ -38,7 +38,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
           <SidebarHeader className="p-4 flex items-center justify-center group-data-[state=expanded]:justify-between border-b border-sidebar-border">
             <Link href="/" className="flex items-center gap-2 group-data-[state=collapsed]:hidden">
               <Logo className="h-8 w-auto text-sidebar-primary" />
-              <span className="font-semibold text-lg">Blufitt connect</span>
+              <span className="font-semibold text-lg">AgroRiego Conecta</span>
             </Link>
              <Link href="/" className="hidden items-center gap-2 group-data-[state=collapsed]:flex">
               <Logo className="h-8 w-8 text-sidebar-primary" />
@@ -49,13 +49,13 @@ export default function AppLayout({ children }: AppLayoutProps) {
           </SidebarContent>
           <SidebarFooter className="p-2 border-t border-sidebar-border">
             <SidebarMenuButton
-              tooltip="Settings"
+              tooltip="Configuración"
               className="w-full justify-start hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
               asChild
             >
               <Link href="/settings">
                 <Settings className="h-5 w-5" />
-                <span>Settings</span>
+                <span>Configuración</span>
               </Link>
             </SidebarMenuButton>
           </SidebarFooter>
@@ -72,26 +72,30 @@ export default function AppLayout({ children }: AppLayoutProps) {
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="rounded-full">
                   <Avatar className="h-9 w-9">
-                    <AvatarImage src="https://picsum.photos/seed/user/50/50" alt="User Avatar" data-ai-hint="user avatar" />
-                    <AvatarFallback>BC</AvatarFallback>
+                    <AvatarImage src="https://picsum.photos/seed/user-agroriego/50/50" alt="Avatar de Usuario" data-ai-hint="user avatar" />
+                    <AvatarFallback>AC</AvatarFallback> {/* AgroRiego Conecta initials */}
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                <DropdownMenuLabel>Mi Cuenta</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem>
-                  <UserCircle className="mr-2 h-4 w-4" />
-                  <span>Profile</span>
+                <DropdownMenuItem asChild>
+                  <Link href="/settings?tabs=profile"> {/* Updated Link */}
+                    <UserCircle className="mr-2 h-4 w-4" />
+                    <span>Perfil</span>
+                  </Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <Settings className="mr-2 h-4 w-4" />
-                  <span>Settings</span>
+                <DropdownMenuItem asChild>
+                  <Link href="/settings"> {/* Updated Link */}
+                    <Settings className="mr-2 h-4 w-4" />
+                    <span>Configuración</span>
+                  </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem>
+                <DropdownMenuItem> {/* Add logout functionality later */}
                   <LogOut className="mr-2 h-4 w-4" />
-                  <span>Logout</span>
+                  <span>Cerrar Sesión</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

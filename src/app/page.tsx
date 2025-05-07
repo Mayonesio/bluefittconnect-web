@@ -1,39 +1,39 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { Dumbbell, TrendingUp, BookOpen, ArrowRight, HeartPulse } from 'lucide-react';
+import { SlidersHorizontal, Puzzle, Gauge, ArrowRight, Newspaper } from 'lucide-react';
 
 export default function DashboardPage() {
   const featureCards = [
     {
-      title: "Workout Plans",
-      description: "Discover and follow personalized workout routines.",
-      icon: Dumbbell,
-      href: "/workout-plans",
-      cta: "Explore Plans",
+      title: "Válvulas",
+      description: "Explore nuestra gama de válvulas para optimizar su sistema de riego.",
+      icon: SlidersHorizontal,
+      href: "/productos?categoria=valvula", 
+      cta: "Ver Válvulas",
     },
     {
-      title: "Progress Tracking",
-      description: "Monitor your achievements and stay motivated.",
-      icon: TrendingUp,
-      href: "/activity-log",
-      cta: "Track Progress",
+      title: "Racores",
+      description: "Conectores y accesorios esenciales para una instalación eficiente.",
+      icon: Puzzle, 
+      href: "/productos?categoria=racor",
+      cta: "Ver Racores",
     },
     {
-      title: "Health Hub",
-      description: "Access curated articles on fitness, nutrition, and wellness.",
-      icon: HeartPulse, // Changed from BookOpen for more fitness vibe
-      href: "/health-hub",
-      cta: "Read Articles",
+      title: "Caudalímetros",
+      description: "Mida y controle el flujo de agua con precisión en sus sistemas.",
+      icon: Gauge, 
+      href: "/productos?categoria=caudalimetro",
+      cta: "Ver Caudalímetros",
     },
   ];
 
   return (
     <div className="flex flex-col gap-8">
       <header className="space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight text-foreground">Welcome to Blufitt connect</h1>
+        <h1 className="text-3xl font-bold tracking-tight text-foreground">Bienvenido a AgroRiego Conecta</h1>
         <p className="text-muted-foreground">
-          Your central hub for connecting with your fitness goals and tracking progress.
+          Su plataforma central para soluciones de riego agrícola: válvulas, racores y caudalímetros.
         </p>
       </header>
 
@@ -61,15 +61,22 @@ export default function DashboardPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-xl font-semibold">Recent Activity</CardTitle>
-          <CardDescription>Overview of your recent workouts and health logs.</CardDescription>
+          <CardTitle className="text-xl font-semibold">Últimas Noticias del Blog</CardTitle>
+          <CardDescription>Manténgase informado sobre novedades y consejos en riego.</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center justify-center h-40 border-2 border-dashed rounded-md">
-            <p className="text-muted-foreground">Activity feed coming soon...</p>
+          <div className="flex flex-col items-center justify-center h-40 border-2 border-dashed rounded-md">
+            <Newspaper className="h-10 w-10 text-muted-foreground mb-3" />
+            <p className="text-muted-foreground mb-3">Contenido del blog próximamente...</p>
+            <Button asChild variant="secondary">
+              <Link href="/blog">
+                Ir al Blog
+              </Link>
+            </Button>
           </div>
         </CardContent>
       </Card>
     </div>
   );
 }
+

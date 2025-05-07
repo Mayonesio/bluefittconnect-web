@@ -9,45 +9,45 @@ export default function SettingsPage() {
   return (
     <div className="flex flex-col gap-8 max-w-3xl mx-auto">
       <header>
-        <h1 className="text-3xl font-bold tracking-tight text-foreground">Settings</h1>
+        <h1 className="text-3xl font-bold tracking-tight text-foreground">Configuración</h1>
         <p className="text-muted-foreground">
-          Manage your account and application preferences.
+          Administre su cuenta y las preferencias de la aplicación.
         </p>
       </header>
 
       <Tabs defaultValue="profile" className="w-full">
         <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="profile">Profile</TabsTrigger>
-          <TabsTrigger value="appearance">Appearance</TabsTrigger>
-          <TabsTrigger value="notifications">Notifications</TabsTrigger>
+          <TabsTrigger value="profile">Perfil</TabsTrigger>
+          <TabsTrigger value="appearance">Apariencia</TabsTrigger>
+          <TabsTrigger value="notifications">Notificaciones</TabsTrigger>
         </TabsList>
         
         <TabsContent value="profile">
           <Card>
             <CardHeader>
-              <CardTitle>Profile Information</CardTitle>
-              <CardDescription>Update your personal details.</CardDescription>
+              <CardTitle>Información del Perfil</CardTitle>
+              <CardDescription>Actualice sus datos personales.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <Label htmlFor="firstName">First Name</Label>
+                  <Label htmlFor="firstName">Nombre</Label>
                   <Input id="firstName" defaultValue="Admin" />
                 </div>
                 <div className="space-y-1">
-                  <Label htmlFor="lastName">Last Name</Label>
-                  <Input id="lastName" defaultValue="User" />
+                  <Label htmlFor="lastName">Apellidos</Label>
+                  <Input id="lastName" defaultValue="Usuario" />
                 </div>
               </div>
               <div className="space-y-1">
-                <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" defaultValue="admin@blufitt.pro" />
+                <Label htmlFor="email">Correo Electrónico</Label>
+                <Input id="email" type="email" defaultValue="admin@agroriego.pro" />
               </div>
               <div className="space-y-1">
-                <Label htmlFor="company">Company (Optional)</Label>
-                <Input id="company" defaultValue="Blufitt connect Solutions" />
+                <Label htmlFor="company">Empresa (Opcional)</Label>
+                <Input id="company" defaultValue="Soluciones AgroRiego" />
               </div>
-              <Button className="mt-4">Save Changes</Button>
+              <Button className="mt-4">Guardar Cambios</Button>
             </CardContent>
           </Card>
         </TabsContent>
@@ -55,25 +55,25 @@ export default function SettingsPage() {
         <TabsContent value="appearance">
           <Card>
             <CardHeader>
-              <CardTitle>Appearance</CardTitle>
-              <CardDescription>Customize the look and feel of the application.</CardDescription>
+              <CardTitle>Apariencia</CardTitle>
+              <CardDescription>Personalice el aspecto de la aplicación.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-2">
-                <Label>Theme</Label>
+                <Label>Tema</Label>
                 <p className="text-sm text-muted-foreground">
-                  Currently, theme switching (Light/Dark) is handled by your system preferences.
-                  A manual toggle might be added in the future.
+                  Actualmente, el cambio de tema (Claro/Oscuro) se gestiona según las preferencias de su sistema.
+                  Se podría añadir un selector manual en el futuro.
                 </p>
               </div>
                <div className="flex items-center space-x-2">
                 <Switch id="compact-mode" />
-                <Label htmlFor="compact-mode">Enable Compact Mode</Label>
+                <Label htmlFor="compact-mode">Activar Modo Compacto</Label>
               </div>
                <p className="text-sm text-muted-foreground">
-                 Compact mode reduces padding and margins for a denser UI (feature coming soon).
+                 El modo compacto reduce el espaciado para una interfaz más densa (función próximamente).
                </p>
-              <Button className="mt-4" disabled>Save Appearance Settings</Button>
+              <Button className="mt-4" disabled>Guardar Ajustes de Apariencia</Button>
             </CardContent>
           </Card>
         </TabsContent>
@@ -81,32 +81,32 @@ export default function SettingsPage() {
         <TabsContent value="notifications">
           <Card>
             <CardHeader>
-              <CardTitle>Notifications</CardTitle>
-              <CardDescription>Manage your notification preferences.</CardDescription>
+              <CardTitle>Notificaciones</CardTitle>
+              <CardDescription>Administre sus preferencias de notificación.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="flex items-center justify-between space-x-2 p-4 border rounded-md">
                 <div>
-                  <Label htmlFor="email-notifications" className="font-medium">Email Notifications</Label>
-                  <p className="text-sm text-muted-foreground">Receive updates about your activity and critical system alerts.</p>
+                  <Label htmlFor="email-notifications" className="font-medium">Notificaciones por Correo</Label>
+                  <p className="text-sm text-muted-foreground">Reciba actualizaciones sobre sus pedidos y alertas importantes.</p>
                 </div>
                 <Switch id="email-notifications" defaultChecked />
               </div>
               <div className="flex items-center justify-between space-x-2 p-4 border rounded-md">
                  <div>
-                  <Label htmlFor="health-hub-updates" className="font-medium">Health Hub Updates</Label>
-                  <p className="text-sm text-muted-foreground">Get notified when new health articles are published.</p>
+                  <Label htmlFor="blog-updates" className="font-medium">Actualizaciones del Blog</Label>
+                  <p className="text-sm text-muted-foreground">Reciba notificaciones cuando se publiquen nuevos artículos en el blog.</p>
                 </div>
-                <Switch id="health-hub-updates" />
+                <Switch id="blog-updates" />
               </div>
                <div className="flex items-center justify-between space-x-2 p-4 border rounded-md">
                  <div>
-                  <Label htmlFor="workout-alerts" className="font-medium">Workout Plan Alerts</Label>
-                  <p className="text-sm text-muted-foreground">Receive notifications for new workout plans or challenges.</p>
+                  <Label htmlFor="product-alerts" className="font-medium">Novedades y Promociones</Label>
+                  <p className="text-sm text-muted-foreground">Reciba notificaciones sobre nuevos productos o promociones especiales.</p>
                 </div>
-                <Switch id="workout-alerts" defaultChecked/>
+                <Switch id="product-alerts" defaultChecked/>
               </div>
-              <Button className="mt-4">Save Notification Preferences</Button>
+              <Button className="mt-4">Guardar Preferencias de Notificación</Button>
             </CardContent>
           </Card>
         </TabsContent>

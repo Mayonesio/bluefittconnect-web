@@ -3,24 +3,24 @@ import type { SVGProps } from 'react';
 export function Logo(props: SVGProps<SVGSVGElement>) {
   return (
     <svg
-      viewBox="0 0 200 50" // Adjusted viewBox for "BLUFITT"
+      viewBox="0 0 260 50" // Adjusted viewBox for "AGRORIEGO"
       xmlns="http://www.w3.org/2000/svg"
-      aria-label="Blufitt connect Logo"
-      {...props} // Allows passing className, width, height, etc.
+      aria-label="Logotipo de AgroRiego Conecta"
+      {...props}
     >
       <style>
         {`
-          .blufitt-text {
+          .agroriego-text {
             font-family: 'Impact', 'Arial Black', sans-serif;
-            font-size: 38px; /* Adjusted font size */
+            font-size: 36px; /* Adjusted font size */
             font-weight: bold;
-            letter-spacing: -1.5px; /* Adjusted for closer fit */
+            letter-spacing: -1px; 
           }
         `}
       </style>
-      <text x="5" y="38" className="blufitt-text"> {/* Adjusted x, y for alignment */}
-        <tspan fill="#00AEEF">B</tspan>
-        <tspan fill="#003366">LUFITT</tspan>
+      <text x="5" y="38" className="agroriego-text">
+        <tspan fill="#00AEEF">AGRO</tspan>
+        <tspan fill="#003366">RIEGO</tspan>
       </text>
     </svg>
   );

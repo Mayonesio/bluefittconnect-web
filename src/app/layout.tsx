@@ -15,10 +15,10 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Blufitt connect',
-  description: 'Connect with your fitness goals and track your progress with Blufitt connect.',
+  title: 'AgroRiego Conecta',
+  description: 'Plataforma de productos de riego agrícola: válvulas, racores y caudalímetros.',
   icons: {
-    icon: '/favicon.ico', // Assuming a favicon might be added later
+    icon: '/favicon.ico', 
   },
 };
 
@@ -28,7 +28,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="es" suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased font-sans`}>
         <AppLayout>{children}</AppLayout>
         <Toaster />

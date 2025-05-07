@@ -16,7 +16,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { ArrowLeft, Heart, Brain, Utensils, ShieldCheck, Image as ImageIcon, Barbell } from 'lucide-react';
+import { ArrowLeft, Image as ImageIcon, PackagePlus, Droplets, Cpu, Award, Lightbulb } from 'lucide-react';
 import Link from "next/link";
 import {
   Select,
@@ -28,48 +28,47 @@ import {
 import { useToast } from "@/hooks/use-toast";
 
 
-const healthArticleSchema = z.object({
-  title: z.string().min(5, "Title must be at least 5 characters.").max(150, "Title is too long."),
-  slug: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Slug must be lowercase alphanumeric with hyphens."),
-  category: z.string().min(1, "Category is required."),
-  excerpt: z.string().min(10, "Excerpt must be at least 10 characters.").max(300, "Excerpt is too long."),
-  content: z.string().min(50, "Content must be at least 50 characters."),
-  imageUrl: z.string().url("Must be a valid URL.").optional().or(z.literal('')),
-  author: z.string().min(2, "Author name is required."),
+const articuloBlogSchema = z.object({
+  titulo: z.string().min(5, "El título debe tener al menos 5 caracteres.").max(150, "El título es demasiado largo."),
+  slug: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "El slug debe ser alfanumérico en minúsculas con guiones.").min(3, "El slug debe tener al menos 3 caracteres."),
+  categoria: z.string().min(1, "La categoría es obligatoria."),
+  extracto: z.string().min(10, "El extracto debe tener al menos 10 caracteres.").max(300, "El extracto es demasiado largo."),
+  contenido: z.string().min(50, "El contenido debe tener al menos 50 caracteres."),
+  imageUrl: z.string().url("Debe ser una URL válida.").optional().or(z.literal('')),
+  autor: z.string().min(2, "El nombre del autor es obligatorio."),
 });
 
-type HealthArticleFormValues = z.infer<typeof healthArticleSchema>;
+type ArticuloBlogFormValues = z.infer<typeof articuloBlogSchema>;
 
-const categories = [
-  { value: "fitness", label: "Fitness", icon: Barbell }, // Replaced Droplet with Barbell
-  { value: "nutrition", label: "Nutrition", icon: Utensils }, // Replaced Tractor with Utensils
-  { value: "wellness", label: "Wellness", icon: Heart }, // Replaced Sun with Heart
-  { value: "mental-health", label: "Mental Health", icon: Brain }, // Replaced Wind with Brain
+const categoriasBlog = [
+  { value: "novedades", label: "Novedades de Productos", icon: PackagePlus },
+  { value: "consejos-riego", label: "Consejos de Riego", icon: Droplets },
+  { value: "tecnologia-agricola", label: "Tecnología Agrícola", icon: Cpu },
+  { value: "casos-exito", label: "Casos de Éxito", icon: Award },
+  { value: "innovacion", label: "Innovación y Futuro", icon: Lightbulb },
 ];
 
-export default function NewHealthArticlePage() {
+export default function NuevoArticuloBlogPage() {
   const { toast } = useToast();
-  const form = useForm<HealthArticleFormValues>({
-    resolver: zodResolver(healthArticleSchema),
+  const form = useForm<ArticuloBlogFormValues>({
+    resolver: zodResolver(articuloBlogSchema),
     defaultValues: {
-      title: "",
+      titulo: "",
       slug: "",
-      category: "",
-      excerpt: "",
-      content: "",
+      categoria: "",
+      extracto: "",
+      contenido: "",
       imageUrl: "",
-      author: "",
+      autor: "",
     },
   });
 
-  function onSubmit(data: HealthArticleFormValues) {
+  function onSubmit(data: ArticuloBlogFormValues) {
     console.log(data);
     toast({
-      title: "Health Article Submitted!",
-      description: `"${data.title}" has been successfully submitted. (This is a demo, no data was actually saved).`,
+      title: "¡Artículo de Blog Enviado!",
+      description: `"${data.titulo}" ha sido enviado con éxito. (Esto es una demo, no se guardaron datos reales).`,
     });
-    // Here you would typically send data to your backend
-    // For now, we just log it and reset the form
     form.reset();
   }
 
@@ -77,15 +76,15 @@ export default function NewHealthArticlePage() {
     <div className="flex flex-col gap-8">
       <header className="flex items-center gap-4">
         <Button variant="outline" size="icon" asChild>
-          <Link href="/health-hub">
+          <Link href="/blog">
             <ArrowLeft className="h-4 w-4" />
-            <span className="sr-only">Back to Health Hub</span>
+            <span className="sr-only">Volver al Blog</span>
           </Link>
         </Button>
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">Create New Health Article</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">Crear Nuevo Artículo de Blog</h1>
           <p className="text-muted-foreground">
-            Fill in the details below to publish a new article.
+            Complete los detalles a continuación para publicar un nuevo artículo.
           </p>
         </div>
       </header>
@@ -94,18 +93,18 @@ export default function NewHealthArticlePage() {
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
           <Card>
             <CardHeader>
-              <CardTitle>Article Details</CardTitle>
-              <CardDescription>Provide the main information for your health article.</CardDescription>
+              <CardTitle>Detalles del Artículo</CardTitle>
+              <CardDescription>Proporcione la información principal para su artículo.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <FormField
                 control={form.control}
-                name="title"
+                name="titulo"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Title</FormLabel>
+                    <FormLabel>Título</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter article title" {...field} />
+                      <Input placeholder="Ingrese el título del artículo" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -119,10 +118,10 @@ export default function NewHealthArticlePage() {
                   <FormItem>
                     <FormLabel>Slug</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g., my-awesome-article" {...field} />
+                      <Input placeholder="ej., mi-nuevo-articulo" {...field} />
                     </FormControl>
                     <FormDescription>
-                      This will be part of the URL. Use lowercase letters, numbers, and hyphens.
+                      Esto será parte de la URL. Use letras minúsculas, números y guiones.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -131,18 +130,18 @@ export default function NewHealthArticlePage() {
 
               <FormField
                 control={form.control}
-                name="category"
+                name="categoria"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Category</FormLabel>
+                    <FormLabel>Categoría</FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select a category" />
+                          <SelectValue placeholder="Seleccione una categoría" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {categories.map(cat => (
+                        {categoriasBlog.map(cat => (
                           <SelectItem key={cat.value} value={cat.value}>
                             <div className="flex items-center gap-2">
                               <cat.icon className="h-4 w-4 text-muted-foreground" />
@@ -159,12 +158,12 @@ export default function NewHealthArticlePage() {
               
               <FormField
                 control={form.control}
-                name="author"
+                name="autor"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Author</FormLabel>
+                    <FormLabel>Autor</FormLabel>
                     <FormControl>
-                      <Input placeholder="Author's name" {...field} />
+                      <Input placeholder="Nombre del autor" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -176,15 +175,15 @@ export default function NewHealthArticlePage() {
                 name="imageUrl"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Featured Image URL (Optional)</FormLabel>
+                    <FormLabel>URL de Imagen Destacada (Opcional)</FormLabel>
                     <FormControl>
                       <div className="flex items-center gap-2">
                         <ImageIcon className="h-5 w-5 text-muted-foreground" />
-                        <Input placeholder="https://example.com/image.jpg" {...field} />
+                        <Input placeholder="https://ejemplo.com/imagen.jpg" {...field} />
                       </div>
                     </FormControl>
                     <FormDescription>
-                      Link to an image that will be featured with your article.
+                      Enlace a una imagen que se destacará con su artículo.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -195,18 +194,18 @@ export default function NewHealthArticlePage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Article Content</CardTitle>
+              <CardTitle>Contenido del Artículo</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
               <FormField
                 control={form.control}
-                name="excerpt"
+                name="extracto"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Excerpt</FormLabel>
+                    <FormLabel>Extracto</FormLabel>
                     <FormControl>
                       <Textarea
-                        placeholder="A short summary of your article (max 300 characters)"
+                        placeholder="Un breve resumen de su artículo (máx 300 caracteres)"
                         className="resize-none"
                         rows={3}
                         {...field}
@@ -219,19 +218,19 @@ export default function NewHealthArticlePage() {
 
               <FormField
                 control={form.control}
-                name="content"
+                name="contenido"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Main Content</FormLabel>
+                    <FormLabel>Contenido Principal</FormLabel>
                     <FormControl>
                       <Textarea
-                        placeholder="Write your full article here. Markdown is supported."
+                        placeholder="Escriba aquí su artículo completo. Se admite Markdown."
                         className="min-h-[300px] resize-y"
                         {...field}
                       />
                     </FormControl>
                     <FormDescription>
-                      Use Markdown for formatting (e.g., # Heading, *italic*, **bold**).
+                      Use Markdown para formatear (ej., # Encabezado, *itálica*, **negrita**).
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -242,9 +241,9 @@ export default function NewHealthArticlePage() {
 
           <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" asChild>
-              <Link href="/health-hub">Cancel</Link>
+              <Link href="/blog">Cancelar</Link>
             </Button>
-            <Button type="submit">Publish Article</Button>
+            <Button type="submit">Publicar Artículo</Button>
           </div>
         </form>
       </Form>

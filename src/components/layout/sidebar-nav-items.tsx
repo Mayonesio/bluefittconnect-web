@@ -7,17 +7,27 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
 } from '@/components/ui/sidebar';
-import { Dumbbell, TrendingUp, HeartPulse, LayoutDashboard } from 'lucide-react'; // Updated icons
+import { LayoutDashboard, ShoppingBag, Newspaper, ListOrdered } from 'lucide-react'; // Replaced Settings with ListOrdered
 
 const navItems = [
-  { href: '/', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/workout-plans', label: 'Workout Plans', icon: Dumbbell }, // Changed from Product Catalog
-  { href: '/activity-log', label: 'Activity Log', icon: TrendingUp }, // Changed from Proformas
-  { href: '/health-hub', label: 'Health Hub', icon: HeartPulse }, // Changed from Blog
+  { href: '/', label: 'Tablero', icon: LayoutDashboard },
+  { href: '/productos', label: 'Productos', icon: ShoppingBag },
+  { href: '/pedidos', label: 'Mis Pedidos', icon: ListOrdered },
+  { href: '/blog', label: 'Blog', icon: Newspaper },
 ];
 
 export default function SidebarNavItems() {
   const pathname = usePathname();
+
+  const isActive = (itemHref: string) => {
+    if (itemHref === '/') return pathname === '/';
+    // Exact match for /productos, /pedidos, /blog
+    if (itemHref === '/productos') return pathname === '/productos' || pathname.startsWith('/productos?');
+    if (itemHref === '/pedidos') return pathname === '/pedidos';
+    if (itemHref === '/blog') return pathname === '/blog' || pathname.startsWith('/blog/');
+    // Fallback for potential sub-routes if any other items are added
+    return pathname.startsWith(itemHref);
+  };
 
   return (
     <SidebarMenu>
@@ -25,7 +35,7 @@ export default function SidebarNavItems() {
         <SidebarMenuItem key={item.label}>
           <SidebarMenuButton
             asChild
-            isActive={pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href))}
+            isActive={isActive(item.href)}
             tooltip={item.label}
             className="w-full justify-start text-sm hover:bg-sidebar-accent hover:text-sidebar-accent-foreground data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground"
           >
