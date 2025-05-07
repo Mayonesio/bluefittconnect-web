@@ -43,7 +43,6 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
-    // This useEffect handles redirection if the user is already logged in when visiting the page
     if (!authLoading && user) {
       const redirectUrl = searchParams.get("redirect") || "/";
       router.push(redirectUrl);
@@ -86,8 +85,7 @@ export default function LoginPage() {
         title: "¡Bienvenido de Nuevo!",
         description: "Has iniciado sesión correctamente.",
       });
-      const redirectUrl = searchParams.get("redirect") || "/";
-      router.push(redirectUrl); // Explicit redirection
+      // Redirection will be handled by the useEffect hook watching `user` and `authLoading`
     } catch (error) {
       const authError = error as AuthError;
       let errorMessage = "Error al iniciar sesión. Por favor, verifica tus credenciales.";
@@ -124,8 +122,7 @@ export default function LoginPage() {
         title: "¡Bienvenido!",
         description: "Has iniciado sesión correctamente con Google.",
       });
-      const redirectUrl = searchParams.get("redirect") || "/";
-      router.push(redirectUrl); // Explicit redirection
+      // Redirection will be handled by the useEffect hook watching `user` and `authLoading`
     } catch (error) {
       const authError = error as AuthError;
       let errorMessage = "Error al iniciar sesión con Google. Inténtalo de nuevo.";

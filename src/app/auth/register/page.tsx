@@ -47,7 +47,6 @@ export default function RegisterPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   useEffect(() => {
-    // This useEffect handles redirection if the user is already logged in when visiting the page
     if (!authLoading && user) {
       const redirectUrl = searchParams.get("redirect") || "/";
       router.push(redirectUrl);
@@ -91,8 +90,7 @@ export default function RegisterPage() {
         title: "¡Registro Exitoso!",
         description: "Tu cuenta ha sido creada. Bienvenido a Blufitt Connect.",
       });
-      const redirectUrl = searchParams.get("redirect") || "/";
-      router.push(redirectUrl); // Explicit redirection
+      // Redirection will be handled by the useEffect hook watching `user` and `authLoading`
     } catch (error) {
       const authError = error as AuthError;
       let errorMessage = "Error al registrar. Por favor, inténtalo de nuevo.";
@@ -131,8 +129,7 @@ export default function RegisterPage() {
         title: "¡Registro con Google Exitoso!",
         description: "Tu cuenta ha sido creada con Google. Bienvenido a Blufitt Connect.",
       });
-      const redirectUrl = searchParams.get("redirect") || "/";
-      router.push(redirectUrl); // Explicit redirection
+       // Redirection will be handled by the useEffect hook watching `user` and `authLoading`
     } catch (error) {
       const authError = error as AuthError;
       let errorMessage = "Error al registrar con Google. Inténtalo de nuevo.";
