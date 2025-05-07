@@ -1,12 +1,14 @@
+// src/app/(app)/pedidos/page.tsx
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { PackageSearch, ShoppingCart, ListOrdered } from 'lucide-react';
+import { PackageSearch, ShoppingCart, ListOrdered, LogIn } from 'lucide-react';
 import Link from "next/link";
 import React from "react";
+import { useAuth } from "@/contexts/auth-context";
 
 interface Pedido {
   id: string;
@@ -26,13 +28,41 @@ const getStatusBadgeVariant = (status: Pedido['estado']) => {
   switch (status) {
     case 'Entregado': return 'default'; 
     case 'Enviado': return 'secondary';
-    case 'Procesando': return 'outline'; // More neutral for processing
+    case 'Procesando': return 'outline'; 
     case 'Cancelado': return 'destructive';
     default: return 'outline';
   }
 };
 
 export default function MisPedidosPage() {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen">
+        <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-primary"></div>
+        <p className="mt-4 text-muted-foreground">Cargando tus pedidos...</p>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[calc(100vh-10rem)] text-center">
+        <ListOrdered className="h-16 w-16 text-muted-foreground mb-6" />
+        <h2 className="text-2xl font-semibold mb-2">Acceso Restringido</h2>
+        <p className="text-muted-foreground mb-6">
+          Debes iniciar sesión para ver tu historial de pedidos.
+        </p>
+        <Button asChild>
+          <Link href="/auth/login">
+            <LogIn className="mr-2 h-4 w-4" /> Iniciar Sesión
+          </Link>
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-8">
       <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">

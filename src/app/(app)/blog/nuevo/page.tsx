@@ -1,3 +1,4 @@
+// src/app/(app)/blog/nuevo/page.tsx
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -16,7 +17,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { ArrowLeft, Image as ImageIcon, PackagePlus, Droplets, Cpu, Award, Lightbulb } from 'lucide-react';
+import { ArrowLeft, Image as ImageIcon, PackagePlus, Droplets, Cpu, Award, Lightbulb, LogIn } from 'lucide-react';
 import Link from "next/link";
 import {
   Select,
@@ -26,6 +27,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/auth-context";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
 
 const articuloBlogSchema = z.object({
@@ -50,6 +54,15 @@ const categoriasBlog = [
 
 export default function NuevoArticuloBlogPage() {
   const { toast } = useToast();
+  const { user, loading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push("/auth/login?redirect=/blog/nuevo");
+    }
+  }, [user, loading, router]);
+
   const form = useForm<ArticuloBlogFormValues>({
     resolver: zodResolver(articuloBlogSchema),
     defaultValues: {
@@ -59,18 +72,53 @@ export default function NuevoArticuloBlogPage() {
       extracto: "",
       contenido: "",
       imageUrl: "",
-      autor: "",
+      autor: user?.displayName || user?.email || "", // Prefill author if available
     },
   });
 
+  useEffect(() => {
+    if (user) {
+      form.setValue("autor", user.displayName || user.email || "");
+    }
+  }, [user, form]);
+
   function onSubmit(data: ArticuloBlogFormValues) {
     console.log(data);
+    // Here you would typically send data to your backend/Firebase
     toast({
       title: "¡Artículo de Blog Enviado!",
       description: `"${data.titulo}" ha sido enviado con éxito. (Esto es una demo, no se guardaron datos reales).`,
     });
     form.reset();
   }
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen">
+        <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-primary"></div>
+        <p className="mt-4 text-muted-foreground">Cargando editor...</p>
+      </div>
+    );
+  }
+
+  if (!user) {
+     // This is a fallback, useEffect should redirect
+    return (
+      <div className="flex flex-col items-center justify-center h-[calc(100vh-10rem)] text-center">
+        <Lightbulb className="h-16 w-16 text-muted-foreground mb-6" />
+        <h2 className="text-2xl font-semibold mb-2">Acceso Restringido</h2>
+        <p className="text-muted-foreground mb-6">
+          Debes iniciar sesión para crear un nuevo artículo.
+        </p>
+        <Button asChild>
+          <Link href="/auth/login?redirect=/blog/nuevo">
+            <LogIn className="mr-2 h-4 w-4" /> Iniciar Sesión
+          </Link>
+        </Button>
+      </div>
+    );
+  }
+
 
   return (
     <div className="flex flex-col gap-8">

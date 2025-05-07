@@ -1,3 +1,4 @@
+// src/app/(app)/productos/page.tsx
 "use client"; 
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -15,6 +16,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import React, { useState, useMemo, useEffect } from "react"; 
 import { useSearchParams, useRouter } from 'next/navigation';
+import { useAuth } from "@/contexts/auth-context";
 
 interface Producto {
   id: string;
@@ -46,6 +48,7 @@ const categoriesList: { value: Producto['categoria'], label: string }[] = [
 export default function ProductosPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { user, loading } = useAuth();
   
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -54,7 +57,7 @@ export default function ProductosPage() {
     const initialCategory = searchParams.get('categoria');
     if (initialCategory && categoriesList.some(c => c.value.toLowerCase() === initialCategory)) {
       setSelectedCategories([initialCategory]);
-    } else if (initialCategory === null) { // If no category in URL, clear selection
+    } else if (initialCategory === null) { 
       setSelectedCategories([]);
     }
   }, [searchParams]);
@@ -72,15 +75,9 @@ export default function ProductosPage() {
     
     const newParams = new URLSearchParams(searchParams.toString());
     if (newSelectedCategories.length > 0) {
-      // For simplicity with current UI, if multiple are selected, URL might only reflect one
-      // Or join them: newParams.set('categoria', newSelectedCategories.join(','));
-      // For now, let's handle single selection in URL properly or remove if empty
       if (newSelectedCategories.length === 1) {
         newParams.set('categoria', newSelectedCategories[0]);
       } else {
-         // If unchecking the last one or multiple categories are conceptually active 
-         // but not reflected in URL, consider how to handle this.
-         // For now, if more than one is selected, or if unchecking to zero, remove from URL.
         newParams.delete('categoria');
       }
     } else {
@@ -115,7 +112,7 @@ export default function ProductosPage() {
             Explore nuestra selección de válvulas, racores y caudalímetros.
           </p>
         </div>
-        <Button disabled>
+        <Button disabled={!user || loading} title={!user ? "Debe iniciar sesión para añadir productos" : ""}>
           <PlusCircle className="mr-2 h-4 w-4" /> Añadir Nuevo Producto
         </Button>
       </header>
@@ -205,4 +202,3 @@ export default function ProductosPage() {
     </div>
   );
 }
-

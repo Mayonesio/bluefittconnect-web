@@ -1,3 +1,4 @@
+// src/app/(app)/blog/page.tsx
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -6,6 +7,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { PlusCircle, Newspaper, Droplets, Cpu, Lightbulb, Award } from 'lucide-react';
 import { Badge } from "@/components/ui/badge";
+import { useAuth } from "@/contexts/auth-context";
 
 interface ArticuloBlog {
   id: string;
@@ -28,6 +30,8 @@ const sampleArticulosBlog: ArticuloBlog[] = [
 ];
 
 export default function BlogPage() {
+  const { user, loading } = useAuth();
+
   return (
     <div className="flex flex-col gap-8">
       <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -37,7 +41,7 @@ export default function BlogPage() {
             Artículos, novedades y consejos sobre riego agrícola y tecnología.
           </p>
         </div>
-        <Button asChild>
+        <Button asChild disabled={!user || loading} title={!user ? "Debe iniciar sesión para crear artículos" : ""}>
           <Link href="/blog/nuevo"> 
             <PlusCircle className="mr-2 h-4 w-4" /> Crear Nuevo Artículo
           </Link>
@@ -91,7 +95,7 @@ export default function BlogPage() {
             <Newspaper className="h-12 w-12 text-muted-foreground mb-4" />
             <h3 className="text-xl font-semibold text-muted-foreground">No hay artículos todavía</h3>
             <p className="text-muted-foreground mb-4">Comience creando su primer artículo para el blog.</p>
-            <Button asChild>
+            <Button asChild disabled={!user || loading} title={!user ? "Debe iniciar sesión para crear artículos" : ""}>
               <Link href="/blog/nuevo">
                 <PlusCircle className="mr-2 h-4 w-4" /> Crear Nuevo Artículo
               </Link>
