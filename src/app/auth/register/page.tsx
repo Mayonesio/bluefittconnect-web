@@ -21,10 +21,9 @@ import { useToast } from "@/hooks/use-toast";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { AuthError } from "firebase/auth";
-import { Eye, EyeOff, UserPlus } from "lucide-react";
+import { Eye, EyeOff, UserPlus, AlertTriangle } from "lucide-react";
 
 const registerSchema = z.object({
-  // name: z.string().min(2, "El nombre debe tener al menos 2 caracteres.").max(50, "El nombre es demasiado largo."),
   email: z.string().email("Debe ser un correo electrónico válido."),
   password: z.string().min(6, "La contraseña debe tener al menos 6 caracteres."),
   confirmPassword: z.string().min(6, "La confirmación de contraseña debe tener al menos 6 caracteres."),
@@ -36,7 +35,7 @@ const registerSchema = z.object({
 export type RegisterFormValues = z.infer<typeof registerSchema>;
 
 export default function RegisterPage() {
-  const { register, user, loading: authLoading } = useAuth();
+  const { register, user, loading: authLoading, isFirebaseEnabled } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -51,11 +50,20 @@ export default function RegisterPage() {
     }
   }, [user, authLoading, router, searchParams]);
 
+  useEffect(() => {
+    if (!authLoading && !isFirebaseEnabled && !user) {
+      toast({
+        title: "Error de Configuración de Firebase",
+        description: "Las funciones de autenticación están deshabilitadas. Contacte al administrador o revise la configuración de Firebase.",
+        variant: "destructive",
+        duration: Infinity, 
+      });
+    }
+  }, [authLoading, isFirebaseEnabled, user, toast]);
 
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
-      // name: "",
       email: "",
       password: "",
       confirmPassword: "",
@@ -63,6 +71,15 @@ export default function RegisterPage() {
   });
 
   const onSubmit = async (data: RegisterFormValues) => {
+     if (!isFirebaseEnabled) {
+      toast({
+        title: "Configuración Incompleta",
+        description: "Firebase no está configurado. No se puede registrar.",
+        variant: "destructive",
+      });
+      setIsLoading(false);
+      return;
+    }
     setIsLoading(true);
     try {
       await register(data);
@@ -70,7 +87,7 @@ export default function RegisterPage() {
         title: "¡Registro Exitoso!",
         description: "Tu cuenta ha sido creada. Bienvenido a Blufitt Connect.",
       });
-      // Redirect handled by useEffect
+      // Redirect handled by useEffect or middleware
     } catch (error) {
       const authError = error as AuthError;
       let errorMessage = "Error al registrar. Por favor, inténtalo de nuevo.";
@@ -80,6 +97,8 @@ export default function RegisterPage() {
         errorMessage = "El formato del correo electrónico no es válido.";
       } else if (authError.code === "auth/weak-password") {
         errorMessage = "La contraseña es demasiado débil.";
+      } else if (authError.message.includes("Firebase no está configurado")) {
+        errorMessage = authError.message;
       }
       toast({
         title: "Error de Registro",
@@ -91,13 +110,35 @@ export default function RegisterPage() {
     }
   };
 
-  if (authLoading || (!authLoading && user)) {
+  if (authLoading) {
     return (
       <div className="flex flex-col items-center justify-center h-screen">
         <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-primary"></div>
-        <p className="mt-4 text-muted-foreground">{authLoading ? "Verificando sesión..." : "Redirigiendo..."}</p>
+        <p className="mt-4 text-muted-foreground">
+          {authLoading ? "Verificando sesión..." : "Inicializando..."}
+        </p>
       </div>
     );
+  }
+  
+  if (!user && !isFirebaseEnabled && !authLoading) {
+     return (
+      <Card className="w-full max-w-md shadow-xl">
+        <CardHeader className="text-center">
+          <AlertTriangle className="mx-auto h-12 w-12 text-destructive mb-4" />
+          <CardTitle className="text-2xl">Error de Configuración</CardTitle>
+          <CardDescription>
+            El sistema de autenticación no está disponible.
+            Revise la consola para más detalles o contacte al soporte.
+          </CardDescription>
+        </CardHeader>
+         <CardContent>
+           <Button variant="outline" className="w-full" onClick={() => router.refresh()}>
+            Reintentar Carga
+          </Button>
+        </CardContent>
+      </Card>
+     );
   }
 
   return (
@@ -109,19 +150,6 @@ export default function RegisterPage() {
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            {/* <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nombre Completo</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Tu nombre completo" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            /> */}
             <FormField
               control={form.control}
               name="email"
@@ -129,7 +157,12 @@ export default function RegisterPage() {
                 <FormItem>
                   <FormLabel>Correo Electrónico</FormLabel>
                   <FormControl>
-                    <Input type="email" placeholder="tu@correo.com" {...field} />
+                    <Input 
+                      type="email" 
+                      placeholder="tu@correo.com" 
+                      {...field} 
+                      disabled={!isFirebaseEnabled || isLoading}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -147,6 +180,7 @@ export default function RegisterPage() {
                         type={showPassword ? "text" : "password"} 
                         placeholder="••••••••" 
                         {...field} 
+                        disabled={!isFirebaseEnabled || isLoading}
                       />
                       <Button
                         type="button"
@@ -155,6 +189,7 @@ export default function RegisterPage() {
                         className="absolute right-1 top-1/2 h-7 w-7 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                         onClick={() => setShowPassword(!showPassword)}
                         aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                        disabled={!isFirebaseEnabled || isLoading}
                       >
                         {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </Button>
@@ -176,6 +211,7 @@ export default function RegisterPage() {
                           type={showConfirmPassword ? "text" : "password"} 
                           placeholder="••••••••" 
                           {...field} 
+                          disabled={!isFirebaseEnabled || isLoading}
                         />
                         <Button
                           type="button"
@@ -184,6 +220,7 @@ export default function RegisterPage() {
                           className="absolute right-1 top-1/2 h-7 w-7 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                           onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                           aria-label={showConfirmPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                          disabled={!isFirebaseEnabled || isLoading}
                         >
                           {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                         </Button>
@@ -193,7 +230,7 @@ export default function RegisterPage() {
                 </FormItem>
               )}
             />
-            <Button type="submit" className="w-full" disabled={isLoading || authLoading}>
+            <Button type="submit" className="w-full" disabled={isLoading || authLoading || !isFirebaseEnabled}>
                {isLoading ? (
                 <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-primary-foreground mr-2"></div>
               ) : (
@@ -205,7 +242,7 @@ export default function RegisterPage() {
         </Form>
         <p className="mt-6 text-center text-sm text-muted-foreground">
           ¿Ya tienes una cuenta?{" "}
-          <Button variant="link" asChild className="p-0 h-auto font-medium text-primary">
+          <Button variant="link" asChild className="p-0 h-auto font-medium text-primary" disabled={!isFirebaseEnabled}>
             <Link href="/auth/login">Inicia sesión aquí</Link>
           </Button>
         </p>

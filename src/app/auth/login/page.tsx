@@ -21,7 +21,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { AuthError } from "firebase/auth";
-import { Eye, EyeOff, LogIn as LoginIcon } from "lucide-react";
+import { Eye, EyeOff, LogIn as LoginIcon, AlertTriangle } from "lucide-react";
 
 
 const loginSchema = z.object({
@@ -32,13 +32,12 @@ const loginSchema = z.object({
 export type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
-  const { login, user, loading: authLoading } = useAuth();
+  const { login, user, loading: authLoading, isFirebaseEnabled } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-
 
   useEffect(() => {
     if (!authLoading && user) {
@@ -46,6 +45,18 @@ export default function LoginPage() {
       router.push(redirectUrl);
     }
   }, [user, authLoading, router, searchParams]);
+
+  useEffect(() => {
+    // This effect runs once on mount if auth is not loading and Firebase is disabled
+    if (!authLoading && !isFirebaseEnabled && !user) {
+      toast({
+        title: "Error de Configuración de Firebase",
+        description: "Las funciones de autenticación están deshabilitadas. Contacte al administrador o revise la configuración de Firebase.",
+        variant: "destructive",
+        duration: Infinity, 
+      });
+    }
+  }, [authLoading, isFirebaseEnabled, user, toast]);
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -56,6 +67,15 @@ export default function LoginPage() {
   });
 
   const onSubmit = async (data: LoginFormValues) => {
+    if (!isFirebaseEnabled) {
+      toast({
+        title: "Configuración Incompleta",
+        description: "Firebase no está configurado. No se puede iniciar sesión.",
+        variant: "destructive",
+      });
+      setIsLoading(false);
+      return;
+    }
     setIsLoading(true);
     try {
       await login(data);
@@ -63,7 +83,7 @@ export default function LoginPage() {
         title: "¡Bienvenido de Nuevo!",
         description: "Has iniciado sesión correctamente.",
       });
-      // Redirect is handled by useEffect
+      // Redirect is handled by useEffect or middleware
     } catch (error) {
       const authError = error as AuthError;
       let errorMessage = "Error al iniciar sesión. Por favor, verifica tus credenciales.";
@@ -71,6 +91,8 @@ export default function LoginPage() {
         errorMessage = "Correo electrónico o contraseña incorrectos.";
       } else if (authError.code === "auth/invalid-email") {
         errorMessage = "El formato del correo electrónico no es válido.";
+      } else if (authError.message.includes("Firebase no está configurado")) {
+        errorMessage = authError.message;
       }
       toast({
         title: "Error de Inicio de Sesión",
@@ -82,13 +104,35 @@ export default function LoginPage() {
     }
   };
   
-  if (authLoading || (!authLoading && user)) {
+  if (authLoading) { // Show loader if auth state is loading OR if Firebase is disabled (initial check)
     return (
       <div className="flex flex-col items-center justify-center h-screen">
         <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-primary"></div>
-        <p className="mt-4 text-muted-foreground">{authLoading ? "Verificando sesión..." : "Redirigiendo..."}</p>
+        <p className="mt-4 text-muted-foreground">
+          {authLoading ? "Verificando sesión..." : "Inicializando..."}
+        </p>
       </div>
     );
+  }
+
+  if (!user && !isFirebaseEnabled && !authLoading) { // Explicitly show error state if Firebase is disabled
+     return (
+      <Card className="w-full max-w-md shadow-xl">
+        <CardHeader className="text-center">
+          <AlertTriangle className="mx-auto h-12 w-12 text-destructive mb-4" />
+          <CardTitle className="text-2xl">Error de Configuración</CardTitle>
+          <CardDescription>
+            El sistema de autenticación no está disponible.
+            Revise la consola para más detalles o contacte al soporte.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+           <Button variant="outline" className="w-full" onClick={() => router.refresh()}>
+            Reintentar Carga
+          </Button>
+        </CardContent>
+      </Card>
+     );
   }
 
 
@@ -108,7 +152,12 @@ export default function LoginPage() {
                 <FormItem>
                   <FormLabel>Correo Electrónico</FormLabel>
                   <FormControl>
-                    <Input type="email" placeholder="tu@correo.com" {...field} />
+                    <Input 
+                      type="email" 
+                      placeholder="tu@correo.com" 
+                      {...field} 
+                      disabled={!isFirebaseEnabled || isLoading}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -126,6 +175,7 @@ export default function LoginPage() {
                         type={showPassword ? "text" : "password"} 
                         placeholder="••••••••" 
                         {...field} 
+                        disabled={!isFirebaseEnabled || isLoading}
                       />
                       <Button
                         type="button"
@@ -134,6 +184,7 @@ export default function LoginPage() {
                         className="absolute right-1 top-1/2 h-7 w-7 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                         onClick={() => setShowPassword(!showPassword)}
                         aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                        disabled={!isFirebaseEnabled || isLoading}
                       >
                         {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </Button>
@@ -143,7 +194,7 @@ export default function LoginPage() {
                 </FormItem>
               )}
             />
-            <Button type="submit" className="w-full" disabled={isLoading || authLoading}>
+            <Button type="submit" className="w-full" disabled={isLoading || authLoading || !isFirebaseEnabled}>
               {isLoading ? (
                 <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-primary-foreground mr-2"></div>
               ) : (
@@ -155,7 +206,7 @@ export default function LoginPage() {
         </Form>
         <p className="mt-6 text-center text-sm text-muted-foreground">
           ¿No tienes una cuenta?{" "}
-          <Button variant="link" asChild className="p-0 h-auto font-medium text-primary">
+          <Button variant="link" asChild className="p-0 h-auto font-medium text-primary" disabled={!isFirebaseEnabled}>
             <Link href="/auth/register">Regístrate aquí</Link>
           </Button>
         </p>
