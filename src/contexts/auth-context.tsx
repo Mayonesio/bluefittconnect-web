@@ -3,14 +3,15 @@
 
 import type { User as FirebaseUser, AuthError } from "firebase/auth";
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
-// Import the potentially null auth object from Firebase config
 import { auth as firebaseAuthModule } from "@/lib/firebase/config"; 
 import { 
   createUserWithEmailAndPassword, 
   signInWithEmailAndPassword, 
   signOut, 
   onAuthStateChanged,
-  type Auth as FirebaseAuthType // Import Auth type for casting
+  GoogleAuthProvider, // Import GoogleAuthProvider
+  signInWithPopup,    // Import signInWithPopup
+  type Auth as FirebaseAuthType 
 } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import type { LoginFormValues } from "@/app/auth/login/page";
@@ -19,9 +20,10 @@ import type { RegisterFormValues } from "@/app/auth/register/page";
 interface AuthContextType {
   user: FirebaseUser | null;
   loading: boolean;
-  isFirebaseEnabled: boolean; // New state to indicate if Firebase Auth is usable
+  isFirebaseEnabled: boolean; 
   login: (data: LoginFormValues) => Promise<FirebaseUser | null>;
   register: (data: RegisterFormValues) => Promise<FirebaseUser | null>;
+  signInWithGoogle: () => Promise<FirebaseUser | null>; // Add Google sign-in method
   logout: () => Promise<void>;
 }
 
@@ -30,7 +32,6 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [loading, setLoading] = useState(true);
-  // isFirebaseEnabled is true if firebaseAuthModule (the Auth object from config) is not null
   const isFirebaseEnabled = !!firebaseAuthModule; 
   const router = useRouter();
 
@@ -38,22 +39,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (!isFirebaseEnabled) { 
       setLoading(false);
       setUser(null);
-      // This warning will show if firebaseAuthModule is null (init failed)
       console.warn(
           "Firebase Auth module is not initialized, likely due to missing or invalid Firebase configuration (e.g., API key). Authentication features will be disabled."
       );
       return;
     }
 
-    // At this point, firebaseAuthModule is expected to be a valid Auth instance.
-    // We cast it to FirebaseAuthType to satisfy TypeScript.
     const authInstance = firebaseAuthModule as FirebaseAuthType; 
     const unsubscribe = onAuthStateChanged(authInstance, (firebaseUser) => {
       setUser(firebaseUser);
       setLoading(false);
     });
     return () => unsubscribe();
-  }, [isFirebaseEnabled]); // Depend on isFirebaseEnabled
+  }, [isFirebaseEnabled]); 
 
   const login = async (data: LoginFormValues): Promise<FirebaseUser | null> => {
     if (!isFirebaseEnabled || !firebaseAuthModule) {
@@ -63,7 +61,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       const userCredential = await signInWithEmailAndPassword(authInstance, data.email, data.password);
       setUser(userCredential.user);
-      // router.push("/"); // Let middleware or calling page handle redirect
       return userCredential.user;
     } catch (error) {
       console.error("Error al iniciar sesión:", error);
@@ -80,11 +77,29 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       const userCredential = await createUserWithEmailAndPassword(authInstance, data.email, data.password);
       setUser(userCredential.user);
-      // router.push("/"); 
       return userCredential.user;
     } catch (error) {
       console.error("Error al registrar:", error);
       const authError = error as AuthError;
+      throw authError;
+    }
+  };
+
+  const signInWithGoogle = async (): Promise<FirebaseUser | null> => {
+    if (!isFirebaseEnabled || !firebaseAuthModule) {
+      throw new Error("Firebase no está configurado correctamente. No se puede iniciar sesión con Google.");
+    }
+    const authInstance = firebaseAuthModule as FirebaseAuthType;
+    const provider = new GoogleAuthProvider();
+    try {
+      const result = await signInWithPopup(authInstance, provider);
+      setUser(result.user);
+      return result.user;
+    } catch (error) {
+      console.error("Error al iniciar sesión con Google:", error);
+      const authError = error as AuthError;
+      // Handle specific Google sign-in errors if needed
+      // e.g., authError.code === 'auth/popup-closed-by-user'
       throw authError;
     }
   };
@@ -110,7 +125,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, isFirebaseEnabled }}>
+    <AuthContext.Provider value={{ user, loading, login, register, signInWithGoogle, logout, isFirebaseEnabled }}>
       {children}
     </AuthContext.Provider>
   );

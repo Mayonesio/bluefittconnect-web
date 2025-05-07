@@ -22,6 +22,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { AuthError } from "firebase/auth";
 import { Eye, EyeOff, UserPlus, AlertTriangle } from "lucide-react";
+import { GoogleLogo } from "@/components/icons/google-logo"; // Import GoogleLogo
+import { Separator } from "@/components/ui/separator";
 
 const registerSchema = z.object({
   email: z.string().email("Debe ser un correo electrónico válido."),
@@ -35,11 +37,12 @@ const registerSchema = z.object({
 export type RegisterFormValues = z.infer<typeof registerSchema>;
 
 export default function RegisterPage() {
-  const { register, user, loading: authLoading, isFirebaseEnabled } = useAuth();
+  const { register, signInWithGoogle, user, loading: authLoading, isFirebaseEnabled } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
@@ -87,7 +90,6 @@ export default function RegisterPage() {
         title: "¡Registro Exitoso!",
         description: "Tu cuenta ha sido creada. Bienvenido a Blufitt Connect.",
       });
-      // Redirect handled by useEffect or middleware
     } catch (error) {
       const authError = error as AuthError;
       let errorMessage = "Error al registrar. Por favor, inténtalo de nuevo.";
@@ -107,6 +109,40 @@ export default function RegisterPage() {
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleGoogleSignUp = async () => {
+    if (!isFirebaseEnabled) {
+      toast({
+        title: "Configuración Incompleta",
+        description: "Firebase no está configurado. No se puede registrar con Google.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setIsGoogleLoading(true);
+    try {
+      await signInWithGoogle(); // Same function handles new user creation
+      toast({
+        title: "¡Registro con Google Exitoso!",
+        description: "Tu cuenta ha sido creada con Google. Bienvenido a Blufitt Connect.",
+      });
+    } catch (error) {
+      const authError = error as AuthError;
+      let errorMessage = "Error al registrar con Google. Inténtalo de nuevo.";
+       if (authError.code === 'auth/popup-closed-by-user') {
+        errorMessage = 'Proceso de registro con Google cancelado.';
+      } else if (authError.code === 'auth/account-exists-with-different-credential') {
+        errorMessage = 'Ya existe una cuenta con este correo electrónico usando un método de inicio de sesión diferente. Intenta iniciar sesión.';
+      }
+      toast({
+        title: "Error de Registro con Google",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setIsGoogleLoading(false);
     }
   };
 
@@ -161,7 +197,7 @@ export default function RegisterPage() {
                       type="email" 
                       placeholder="tu@correo.com" 
                       {...field} 
-                      disabled={!isFirebaseEnabled || isLoading}
+                      disabled={!isFirebaseEnabled || isLoading || isGoogleLoading}
                     />
                   </FormControl>
                   <FormMessage />
@@ -180,7 +216,7 @@ export default function RegisterPage() {
                         type={showPassword ? "text" : "password"} 
                         placeholder="••••••••" 
                         {...field} 
-                        disabled={!isFirebaseEnabled || isLoading}
+                        disabled={!isFirebaseEnabled || isLoading || isGoogleLoading}
                       />
                       <Button
                         type="button"
@@ -189,7 +225,7 @@ export default function RegisterPage() {
                         className="absolute right-1 top-1/2 h-7 w-7 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                         onClick={() => setShowPassword(!showPassword)}
                         aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
-                        disabled={!isFirebaseEnabled || isLoading}
+                        disabled={!isFirebaseEnabled || isLoading || isGoogleLoading}
                       >
                         {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </Button>
@@ -211,7 +247,7 @@ export default function RegisterPage() {
                           type={showConfirmPassword ? "text" : "password"} 
                           placeholder="••••••••" 
                           {...field} 
-                          disabled={!isFirebaseEnabled || isLoading}
+                          disabled={!isFirebaseEnabled || isLoading || isGoogleLoading}
                         />
                         <Button
                           type="button"
@@ -220,7 +256,7 @@ export default function RegisterPage() {
                           className="absolute right-1 top-1/2 h-7 w-7 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                           onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                           aria-label={showConfirmPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
-                          disabled={!isFirebaseEnabled || isLoading}
+                          disabled={!isFirebaseEnabled || isLoading || isGoogleLoading}
                         >
                           {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                         </Button>
@@ -230,7 +266,7 @@ export default function RegisterPage() {
                 </FormItem>
               )}
             />
-            <Button type="submit" className="w-full" disabled={isLoading || authLoading || !isFirebaseEnabled}>
+            <Button type="submit" className="w-full" disabled={isLoading || authLoading || !isFirebaseEnabled || isGoogleLoading}>
                {isLoading ? (
                 <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-primary-foreground mr-2"></div>
               ) : (
@@ -240,9 +276,30 @@ export default function RegisterPage() {
             </Button>
           </form>
         </Form>
+
+        <div className="my-6 flex items-center">
+          <Separator className="flex-1" />
+          <span className="mx-4 text-xs text-muted-foreground">O REGISTRARSE CON</span>
+          <Separator className="flex-1" />
+        </div>
+
+        <Button 
+          variant="outline" 
+          className="w-full" 
+          onClick={handleGoogleSignUp}
+          disabled={isGoogleLoading || authLoading || !isFirebaseEnabled || isLoading}
+        >
+          {isGoogleLoading ? (
+            <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-primary mr-2"></div>
+          ) : (
+            <GoogleLogo className="mr-2 h-5 w-5" />
+          )}
+          {isGoogleLoading ? "Conectando..." : "Registrarse con Google"}
+        </Button>
+
         <p className="mt-6 text-center text-sm text-muted-foreground">
           ¿Ya tienes una cuenta?{" "}
-          <Button variant="link" asChild className="p-0 h-auto font-medium text-primary" disabled={!isFirebaseEnabled}>
+          <Button variant="link" asChild className="p-0 h-auto font-medium text-primary" disabled={!isFirebaseEnabled || isLoading || isGoogleLoading}>
             <Link href="/auth/login">Inicia sesión aquí</Link>
           </Button>
         </p>

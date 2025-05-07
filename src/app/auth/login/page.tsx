@@ -22,6 +22,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { AuthError } from "firebase/auth";
 import { Eye, EyeOff, LogIn as LoginIcon, AlertTriangle } from "lucide-react";
+import { GoogleLogo } from "@/components/icons/google-logo"; // Import GoogleLogo
+import { Separator } from "@/components/ui/separator";
 
 
 const loginSchema = z.object({
@@ -32,11 +34,12 @@ const loginSchema = z.object({
 export type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
-  const { login, user, loading: authLoading, isFirebaseEnabled } = useAuth();
+  const { login, signInWithGoogle, user, loading: authLoading, isFirebaseEnabled } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
@@ -47,7 +50,6 @@ export default function LoginPage() {
   }, [user, authLoading, router, searchParams]);
 
   useEffect(() => {
-    // This effect runs once on mount if auth is not loading and Firebase is disabled
     if (!authLoading && !isFirebaseEnabled && !user) {
       toast({
         title: "Error de Configuración de Firebase",
@@ -83,7 +85,6 @@ export default function LoginPage() {
         title: "¡Bienvenido de Nuevo!",
         description: "Has iniciado sesión correctamente.",
       });
-      // Redirect is handled by useEffect or middleware
     } catch (error) {
       const authError = error as AuthError;
       let errorMessage = "Error al iniciar sesión. Por favor, verifica tus credenciales.";
@@ -103,8 +104,42 @@ export default function LoginPage() {
       setIsLoading(false);
     }
   };
+
+  const handleGoogleSignIn = async () => {
+    if (!isFirebaseEnabled) {
+      toast({
+        title: "Configuración Incompleta",
+        description: "Firebase no está configurado. No se puede iniciar sesión con Google.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setIsGoogleLoading(true);
+    try {
+      await signInWithGoogle();
+      toast({
+        title: "¡Bienvenido!",
+        description: "Has iniciado sesión correctamente con Google.",
+      });
+    } catch (error) {
+      const authError = error as AuthError;
+      let errorMessage = "Error al iniciar sesión con Google. Inténtalo de nuevo.";
+      if (authError.code === 'auth/popup-closed-by-user') {
+        errorMessage = 'Proceso de inicio de sesión con Google cancelado.';
+      } else if (authError.code === 'auth/account-exists-with-different-credential') {
+        errorMessage = 'Ya existe una cuenta con este correo electrónico usando un método de inicio de sesión diferente.';
+      }
+      toast({
+        title: "Error de Inicio de Sesión con Google",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setIsGoogleLoading(false);
+    }
+  };
   
-  if (authLoading) { // Show loader if auth state is loading OR if Firebase is disabled (initial check)
+  if (authLoading) { 
     return (
       <div className="flex flex-col items-center justify-center h-screen">
         <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-primary"></div>
@@ -115,7 +150,7 @@ export default function LoginPage() {
     );
   }
 
-  if (!user && !isFirebaseEnabled && !authLoading) { // Explicitly show error state if Firebase is disabled
+  if (!user && !isFirebaseEnabled && !authLoading) { 
      return (
       <Card className="w-full max-w-md shadow-xl">
         <CardHeader className="text-center">
@@ -156,7 +191,7 @@ export default function LoginPage() {
                       type="email" 
                       placeholder="tu@correo.com" 
                       {...field} 
-                      disabled={!isFirebaseEnabled || isLoading}
+                      disabled={!isFirebaseEnabled || isLoading || isGoogleLoading}
                     />
                   </FormControl>
                   <FormMessage />
@@ -175,7 +210,7 @@ export default function LoginPage() {
                         type={showPassword ? "text" : "password"} 
                         placeholder="••••••••" 
                         {...field} 
-                        disabled={!isFirebaseEnabled || isLoading}
+                        disabled={!isFirebaseEnabled || isLoading || isGoogleLoading}
                       />
                       <Button
                         type="button"
@@ -184,7 +219,7 @@ export default function LoginPage() {
                         className="absolute right-1 top-1/2 h-7 w-7 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                         onClick={() => setShowPassword(!showPassword)}
                         aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
-                        disabled={!isFirebaseEnabled || isLoading}
+                        disabled={!isFirebaseEnabled || isLoading || isGoogleLoading}
                       >
                         {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </Button>
@@ -194,7 +229,7 @@ export default function LoginPage() {
                 </FormItem>
               )}
             />
-            <Button type="submit" className="w-full" disabled={isLoading || authLoading || !isFirebaseEnabled}>
+            <Button type="submit" className="w-full" disabled={isLoading || authLoading || !isFirebaseEnabled || isGoogleLoading}>
               {isLoading ? (
                 <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-primary-foreground mr-2"></div>
               ) : (
@@ -204,9 +239,30 @@ export default function LoginPage() {
             </Button>
           </form>
         </Form>
+
+        <div className="my-6 flex items-center">
+          <Separator className="flex-1" />
+          <span className="mx-4 text-xs text-muted-foreground">O CONTINUAR CON</span>
+          <Separator className="flex-1" />
+        </div>
+
+        <Button 
+          variant="outline" 
+          className="w-full" 
+          onClick={handleGoogleSignIn}
+          disabled={isGoogleLoading || authLoading || !isFirebaseEnabled || isLoading}
+        >
+          {isGoogleLoading ? (
+            <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-primary mr-2"></div>
+          ) : (
+            <GoogleLogo className="mr-2 h-5 w-5" />
+          )}
+          {isGoogleLoading ? "Conectando..." : "Iniciar Sesión con Google"}
+        </Button>
+
         <p className="mt-6 text-center text-sm text-muted-foreground">
           ¿No tienes una cuenta?{" "}
-          <Button variant="link" asChild className="p-0 h-auto font-medium text-primary" disabled={!isFirebaseEnabled}>
+          <Button variant="link" asChild className="p-0 h-auto font-medium text-primary" disabled={!isFirebaseEnabled || isLoading || isGoogleLoading}>
             <Link href="/auth/register">Regístrate aquí</Link>
           </Button>
         </p>
