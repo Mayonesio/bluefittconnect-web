@@ -22,7 +22,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { AuthError } from "firebase/auth";
 import { Eye, EyeOff, UserPlus, AlertTriangle } from "lucide-react";
-import { GoogleLogo } from "@/components/icons/google-logo"; // Import GoogleLogo
+import { GoogleLogo } from "@/components/icons/google-logo"; 
 import { Separator } from "@/components/ui/separator";
 
 const registerSchema = z.object({
@@ -47,6 +47,7 @@ export default function RegisterPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   useEffect(() => {
+    // This useEffect handles redirection if the user is already logged in when visiting the page
     if (!authLoading && user) {
       const redirectUrl = searchParams.get("redirect") || "/";
       router.push(redirectUrl);
@@ -90,6 +91,8 @@ export default function RegisterPage() {
         title: "¡Registro Exitoso!",
         description: "Tu cuenta ha sido creada. Bienvenido a Blufitt Connect.",
       });
+      const redirectUrl = searchParams.get("redirect") || "/";
+      router.push(redirectUrl); // Explicit redirection
     } catch (error) {
       const authError = error as AuthError;
       let errorMessage = "Error al registrar. Por favor, inténtalo de nuevo.";
@@ -123,11 +126,13 @@ export default function RegisterPage() {
     }
     setIsGoogleLoading(true);
     try {
-      await signInWithGoogle(); // Same function handles new user creation
+      await signInWithGoogle(); 
       toast({
         title: "¡Registro con Google Exitoso!",
         description: "Tu cuenta ha sido creada con Google. Bienvenido a Blufitt Connect.",
       });
+      const redirectUrl = searchParams.get("redirect") || "/";
+      router.push(redirectUrl); // Explicit redirection
     } catch (error) {
       const authError = error as AuthError;
       let errorMessage = "Error al registrar con Google. Inténtalo de nuevo.";
@@ -146,12 +151,12 @@ export default function RegisterPage() {
     }
   };
 
-  if (authLoading) {
+  if (authLoading && !user) {
     return (
       <div className="flex flex-col items-center justify-center h-screen">
         <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-primary"></div>
         <p className="mt-4 text-muted-foreground">
-          {authLoading ? "Verificando sesión..." : "Inicializando..."}
+          Verificando sesión...
         </p>
       </div>
     );

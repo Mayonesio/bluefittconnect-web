@@ -22,7 +22,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { AuthError } from "firebase/auth";
 import { Eye, EyeOff, LogIn as LoginIcon, AlertTriangle } from "lucide-react";
-import { GoogleLogo } from "@/components/icons/google-logo"; // Import GoogleLogo
+import { GoogleLogo } from "@/components/icons/google-logo"; 
 import { Separator } from "@/components/ui/separator";
 
 
@@ -43,6 +43,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
+    // This useEffect handles redirection if the user is already logged in when visiting the page
     if (!authLoading && user) {
       const redirectUrl = searchParams.get("redirect") || "/";
       router.push(redirectUrl);
@@ -85,6 +86,8 @@ export default function LoginPage() {
         title: "¡Bienvenido de Nuevo!",
         description: "Has iniciado sesión correctamente.",
       });
+      const redirectUrl = searchParams.get("redirect") || "/";
+      router.push(redirectUrl); // Explicit redirection
     } catch (error) {
       const authError = error as AuthError;
       let errorMessage = "Error al iniciar sesión. Por favor, verifica tus credenciales.";
@@ -121,6 +124,8 @@ export default function LoginPage() {
         title: "¡Bienvenido!",
         description: "Has iniciado sesión correctamente con Google.",
       });
+      const redirectUrl = searchParams.get("redirect") || "/";
+      router.push(redirectUrl); // Explicit redirection
     } catch (error) {
       const authError = error as AuthError;
       let errorMessage = "Error al iniciar sesión con Google. Inténtalo de nuevo.";
@@ -139,12 +144,12 @@ export default function LoginPage() {
     }
   };
   
-  if (authLoading) { 
+  if (authLoading && !user) { 
     return (
       <div className="flex flex-col items-center justify-center h-screen">
         <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-primary"></div>
         <p className="mt-4 text-muted-foreground">
-          {authLoading ? "Verificando sesión..." : "Inicializando..."}
+          Verificando sesión...
         </p>
       </div>
     );
