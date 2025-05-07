@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'AgroRiego Conecta',
+  title: 'Blufitt Connect',
   description: 'Plataforma de productos de riego agrícola: válvulas, racores y caudalímetros.',
   icons: {
     icon: '/favicon.ico', 
@@ -36,3 +36,4 @@ export default function RootLayout({
     </html>
   );
 }
+

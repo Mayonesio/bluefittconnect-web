@@ -31,7 +31,7 @@ export default function DashboardPage() {
   return (
     <div className="flex flex-col gap-8">
       <header className="space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight text-foreground">Bienvenido a AgroRiego Conecta</h1>
+        <h1 className="text-3xl font-bold tracking-tight text-foreground">Bienvenido a Blufitt Connect</h1>
         <p className="text-muted-foreground">
           Su plataforma central para soluciones de riego agrícola: válvulas, racores y caudalímetros.
         </p>

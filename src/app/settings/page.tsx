@@ -41,11 +41,11 @@ export default function SettingsPage() {
               </div>
               <div className="space-y-1">
                 <Label htmlFor="email">Correo Electrónico</Label>
-                <Input id="email" type="email" defaultValue="admin@agroriego.pro" />
+                <Input id="email" type="email" defaultValue="admin@blufitt.pro" />
               </div>
               <div className="space-y-1">
                 <Label htmlFor="company">Empresa (Opcional)</Label>
-                <Input id="company" defaultValue="Soluciones AgroRiego" />
+                <Input id="company" defaultValue="Soluciones Blufitt" />
               </div>
               <Button className="mt-4">Guardar Cambios</Button>
             </CardContent>
