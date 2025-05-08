@@ -14,7 +14,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import React, { useState, useMemo, useEffect, Suspense } from "react";
+import React, { useState, useMemo, useEffect, Suspense } from "react"; // Ensure Suspense is imported
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useAuth } from "@/contexts/auth-context";
 
@@ -213,4 +213,3 @@ export default function ProductosPage() {
     </Suspense>
   );
 }
-

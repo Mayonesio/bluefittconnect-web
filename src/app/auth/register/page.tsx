@@ -1,5 +1,5 @@
 // src/app/auth/register/page.tsx
-"use client";
+"use client"; // Ensure the page itself is a client component
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -19,7 +19,7 @@ import Link from "next/link";
 import { useAuth } from "@/contexts/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState, Suspense } from "react"; // Added Suspense
+import { useEffect, useState, Suspense } from "react"; 
 import type { AuthError } from "firebase/auth";
 import { Eye, EyeOff, UserPlus, AlertTriangle } from "lucide-react";
 import { GoogleLogo } from "@/components/icons/google-logo";
@@ -40,7 +40,7 @@ function RegisterContent() {
   const { register, signInWithGoogle, user, loading: authContextLoading, isFirebaseEnabled } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
-  const searchParams = useSearchParams(); // useSearchParams is used here
+  const searchParams = useSearchParams(); 
   const [isEmailPasswordLoading, setIsEmailPasswordLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -175,7 +175,7 @@ function RegisterContent() {
   
   const timestampRenderStart = new Date().toISOString();
   if (authContextLoading && !user) {
-    console.log(`[${timestampRenderStart}] RegisterPage RENDER: AuthContext loading (initial check: ${authContextLoading}), NO user. Displaying loading spinner.`);
+    console.log(`[${timestampRenderStart}] RegisterPage RENDER (RegisterContent): AuthContext loading (initial check: ${authContextLoading}), NO user. Displaying loading spinner.`);
     return (
       <div className="flex flex-col items-center justify-center h-screen">
         <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-primary"></div>
@@ -187,7 +187,7 @@ function RegisterContent() {
   }
 
   if (!isFirebaseEnabled && !authContextLoading && !user) {
-     console.log(`[${timestampRenderStart}] RegisterPage RENDER: Firebase NOT enabled, NOT auth loading, NO user. Displaying config error card.`);
+     console.log(`[${timestampRenderStart}] RegisterPage RENDER (RegisterContent): Firebase NOT enabled, NOT auth loading, NO user. Displaying config error card.`);
      return (
       <Card className="w-full max-w-md shadow-xl">
         <CardHeader className="text-center">
@@ -207,7 +207,7 @@ function RegisterContent() {
      );
   }
 
-  console.log(`[${timestampRenderStart}] RegisterPage RENDER: Rendering form. pageInteractionDisabled: ${pageInteractionDisabled} (authCtxLoading: ${authContextLoading}, emailLoading: ${isEmailPasswordLoading}, googleLoading: ${isGoogleLoading}, firebaseEnabled: ${isFirebaseEnabled}) User: ${!!user}`);
+  console.log(`[${timestampRenderStart}] RegisterPage RENDER (RegisterContent): Rendering form. pageInteractionDisabled: ${pageInteractionDisabled} (authCtxLoading: ${authContextLoading}, emailLoading: ${isEmailPasswordLoading}, googleLoading: ${isGoogleLoading}, firebaseEnabled: ${isFirebaseEnabled}) User: ${!!user}`);
 
   return (
     <Card className="w-full max-w-md shadow-xl">
@@ -340,8 +340,7 @@ function RegisterContent() {
   );
 }
 
-
-export default function RegisterPage() {
+export default function RegisterPageWrapper() { // Renamed original export
   return (
     <Suspense fallback={
       <div className="flex flex-col items-center justify-center h-screen">
@@ -353,4 +352,3 @@ export default function RegisterPage() {
     </Suspense>
   );
 }
-

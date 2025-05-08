@@ -1,16 +1,17 @@
+
 // src/app/(app)/admin/users/page.tsx
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react'; // Added Suspense
 import { collection, getDocs, query, orderBy, doc, updateDoc, deleteDoc } from 'firebase/firestore';
-import { db as firestoreDB } from '@/lib/firebase/config'; // Ensure this is the correct export
+import { db as firestoreDB } from '@/lib/firebase/config'; 
 import type { AppUser, UserRole } from '@/types/user';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { UserPlus, Users, Edit3, Trash2, ShieldAlert } from 'lucide-react';
+import { UserPlus, Users, Edit3, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import {
@@ -34,8 +35,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/auth-context';
 
-
-export default function ManageUsersPage() {
+function ManageUsersPageContent() {
   const [users, setUsers] = useState<AppUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -78,6 +78,7 @@ export default function ManageUsersPage() {
 
   useEffect(() => {
     fetchUsers();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const getUserInitials = (displayName: string | null, email: string | null) => {
@@ -121,13 +122,11 @@ export default function ManageUsersPage() {
       toast({ title: "Operación no permitida", description: "Un administrador no puede eliminar su propia cuenta desde esta interfaz.", variant: "destructive"});
       return;
     }
-    // Note: Deleting Firebase Auth user requires Admin SDK. This only deletes Firestore record.
     try {
       const userDocRef = doc(firestoreDB, 'users', userId);
       await deleteDoc(userDocRef);
       toast({ title: "Usuario Eliminado (Firestore)", description: `El perfil de ${userEmail || userId} ha sido eliminado de Firestore.` });
       setUsers(users.filter(u => u.uid !== userId));
-       // Inform admin about Auth user deletion
       toast({
         title: "Acción Requerida (Admin)",
         description: `El usuario ${userEmail || userId} fue eliminado de Firestore. Para eliminarlo completamente de Firebase Authentication, use la Consola de Firebase o el Admin SDK.`,
@@ -150,7 +149,7 @@ export default function ManageUsersPage() {
             Ver y administrar los usuarios de la plataforma.
           </p>
         </div>
-        <Button disabled> {/* Add New User functionality to be implemented */}
+        <Button disabled> 
           <UserPlus className="mr-2 h-4 w-4" /> Añadir Nuevo Usuario
         </Button>
       </header>
@@ -280,5 +279,18 @@ export default function ManageUsersPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function ManageUsersPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex flex-col items-center justify-center h-[calc(100vh-8rem)]">
+        <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-primary"></div>
+        <p className="mt-4 text-muted-foreground">Cargando gestión de usuarios...</p>
+      </div>
+    }>
+      <ManageUsersPageContent />
+    </Suspense>
   );
 }
