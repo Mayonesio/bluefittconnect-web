@@ -40,7 +40,7 @@ export default function ManageUsersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
-  const { appUser: currentAdminUser } = useAuth();
+  const { appUser: currentAdminUser, updateUserRoleByAdmin } = useAuth();
 
   const [editingUser, setEditingUser] = useState<AppUser | null>(null);
   const [newRole, setNewRole] = useState<UserRole | ''>('');
@@ -95,7 +95,7 @@ export default function ManageUsersPage() {
   };
 
   const handleRoleChange = async () => {
-    if (!editingUser || !newRole || !firestoreDB) return;
+    if (!editingUser || !newRole || !firestoreDB || !updateUserRoleByAdmin) return;
     if (editingUser.uid === currentAdminUser?.uid && newRole !== 'admin') {
       toast({ title: "Operación no permitida", description: "Un administrador no puede cambiar su propio rol a uno no administrador.", variant: "destructive"});
       setEditingUser(null);
@@ -104,10 +104,9 @@ export default function ManageUsersPage() {
     }
 
     try {
-      const userDocRef = doc(firestoreDB, 'users', editingUser.uid);
-      await updateDoc(userDocRef, { role: newRole });
+      await updateUserRoleByAdmin(editingUser.uid, newRole as UserRole);
       toast({ title: "Rol Actualizado", description: `El rol de ${editingUser.email} ha sido cambiado a ${newRole}.` });
-      setUsers(users.map(u => u.uid === editingUser.uid ? { ...u, role: newRole } : u));
+      setUsers(users.map(u => u.uid === editingUser.uid ? { ...u, role: newRole as UserRole } : u));
       setEditingUser(null);
       setNewRole('');
     } catch (err) {
@@ -204,8 +203,8 @@ export default function ManageUsersPage() {
                     </TableCell>
                     <TableCell className="hidden sm:table-cell">{user.email}</TableCell>
                     <TableCell>
-                      <Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>
-                        {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
+                      <Badge variant={user.role === 'admin' ? 'default' : 'secondary'} className="capitalize">
+                        {user.role}
                       </Badge>
                     </TableCell>
                     <TableCell>{user.company || 'N/A'}</TableCell>
@@ -262,7 +261,7 @@ export default function ManageUsersPage() {
                             <AlertDialogTitle>¿Eliminar Usuario de Firestore?</AlertDialogTitle>
                             <AlertDialogDescription>
                               Esta acción eliminará el perfil de <span className="font-semibold">{user.email}</span> de la base de datos Firestore.
-                              La cuenta de autenticación de Firebase NO será eliminada y debe gestionarse por separado.
+                              La cuenta de autenticación de Firebase NO será eliminada y debe gestionarse por separado (requiere Admin SDK o consola de Firebase).
                               ¿Está seguro? Esta acción no se puede deshacer.
                             </AlertDialogDescription>
                           </AlertDialogHeader>

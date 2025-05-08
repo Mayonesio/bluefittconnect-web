@@ -2,49 +2,52 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
     // Users collection
     match /users/{userId} {
-      // Allow user to read their own profile
+      // Allow a user to read their own profile.
       allow read: if request.auth != null && request.auth.uid == userId;
-
-      // Allow user to create their own profile upon registration
-      // Typically, a user document is created right after Firebase Auth user creation.
-      // This rule allows the user to write their own document if it doesn't exist yet.
-      allow create: if request.auth != null && request.auth.uid == userId
-                    && request.resource.data.uid == request.auth.uid // Ensure they are setting their own uid
-                    && (!('role' in request.resource.data) || request.resource.data.role == 'user'); // Default role to 'user' or allow if not set by client
-
-      // Allow user to update their own profile (except role)
-      allow update: if request.auth != null && request.auth.uid == userId
-                    && !('role' in request.resource.data && request.resource.data.role != resource.data.role); // Cannot change their own role
-
-      // Allow user to delete their own profile document (e.g., on account deletion)
-      allow delete: if request.auth != null && request.auth.uid == userId;
-
-      // Admin specific rules (applied on top of user-specific rules if admin)
-      // To check for admin role, we need to read the admin's own user document.
-      // This uses get() which reads another document within rules.
-      function isAdmin() {
-        return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
-      }
-
-      // Admins can read any user profile
-      allow read: if request.auth != null && isAdmin();
-
-      // Admins can update any user profile, including their role
-      allow update: if request.auth != null && isAdmin();
       
-      // Admins can delete any user profile document
-      // Note: This only deletes the Firestore document. Deleting the Firebase Auth user
-      // for another user typically requires Admin SDK on a backend.
-      allow delete: if request.auth != null && isAdmin();
+      // Allow a user to create their own profile document upon registration.
+      // This rule might be tightened if creation is only handled server-side or by onAuthStateChanged logic.
+      allow create: if request.auth != null && request.auth.uid == userId;
+      
+      // Allow a user to update their own profile, but not their role.
+      allow update: if request.auth != null && request.auth.uid == userId
+                    && !(request.resource.data.role is string && request.resource.data.role != resource.data.role); // Prevent self-role change
+      
+      // Allow a user to delete their own profile document.
+      // Deleting the Auth user record should ideally be handled via Admin SDK or a Cloud Function for atomicity.
+      allow delete: if request.auth != null && request.auth.uid == userId;
     }
 
-    // Example of other collections (adjust as needed)
+    // Admin access to users collection
+    match /users/{userId} {
+      // Admins can read any user's profile.
+      allow read: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      
+      // Admins can update any user's profile, including their role.
+      allow update: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+
+      // Admins can delete any user's profile document.
+      allow delete: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // Placeholder for other collections - adjust as needed
     // match /products/{productId} {
-    //   allow read: if true; // Anyone can read products
-    //   allow write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'; // Only admins can write products
+    //   allow read: if true; // Example: public read
+    //   allow write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'; // Example: admin write
+    // }
+    
+    // match /orders/{orderId} {
+    //  allow read, write: if request.auth != null && request.auth.uid == resource.data.userId; // User can access their own orders
+    //  allow read: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'; // Admin can read all orders
+    // }
+
+    // match /blog/{postId} {
+    //  allow read: if true; // Public read for blog posts
+    //  allow write: if request.auth != null && 
+    //                 (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+    //                  get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'editor'); // Admin or editor can write
     // }
   }
 }

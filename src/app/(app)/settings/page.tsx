@@ -10,72 +10,61 @@ import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/contexts/auth-context";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { LogIn, Settings as SettingsIcon, UserCircle } from "lucide-react";
+import { LogIn, Settings as SettingsIcon, UserCircle, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { updateProfile as updateFirebaseAuthProfile } from "firebase/auth";
-import { doc, updateDoc, getDoc } from "firebase/firestore";
-import { db as firestoreDB } from "@/lib/firebase/config";
 import { useToast } from "@/hooks/use-toast";
-import type { AppUser } from "@/types/user";
 import { FormDescription } from "@/components/ui/form";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 
 export default function SettingsPage() {
-  const { user: firebaseUser, appUser, loading: authLoading, isFirebaseEnabled } = useAuth();
+  const { user: firebaseUser, appUser, loading: authLoading, isFirebaseEnabled, updateUserProfile, deleteUserAccount } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
 
   const [displayName, setDisplayName] = useState("");
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(""); // Email is read-only from auth
   const [company, setCompany] = useState("");
   const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !firebaseUser) {
       router.push("/auth/login?redirect=/settings");
-    } else if (firebaseUser && appUser) {
-      setDisplayName(appUser.displayName || firebaseUser.displayName || "");
-      setEmail(appUser.email || firebaseUser.email || "");
+    } else if (appUser) { // firebaseUser will also be present if appUser is
+      setDisplayName(appUser.displayName || firebaseUser?.displayName || "");
+      setEmail(appUser.email || firebaseUser?.email || "");
       setCompany(appUser.company || "");
-    } else if (firebaseUser && !appUser && !authLoading) {
-      // Attempt to fetch appUser if firebaseUser exists but appUser is null (e.g., on first load)
-      const fetchProfile = async () => {
-        if (firestoreDB && firebaseUser.uid) {
-          const userDocRef = doc(firestoreDB, "users", firebaseUser.uid);
-          const userDocSnap = await getDoc(userDocRef);
-          if (userDocSnap.exists()) {
-            const fetchedAppUser = userDocSnap.data() as AppUser;
-            setDisplayName(fetchedAppUser.displayName || firebaseUser.displayName || "");
-            setEmail(fetchedAppUser.email || firebaseUser.email || "");
-            setCompany(fetchedAppUser.company || "");
-          }
-        }
-      };
-      fetchProfile();
     }
   }, [firebaseUser, appUser, authLoading, router]);
   
   const handleProfileSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!firebaseUser || !firestoreDB || !isFirebaseEnabled) {
+    if (!firebaseUser || !isFirebaseEnabled || !appUser) {
       toast({ title: "Error", description: "No se puede guardar el perfil. Usuario no autenticado o Firebase no configurado.", variant: "destructive"});
       return;
     }
     setIsSavingProfile(true);
     try {
-      // Update Firebase Auth profile (displayName, photoURL - photoURL not handled here yet)
-      await updateFirebaseAuthProfile(firebaseUser, {
-        displayName: displayName,
-      });
+      // Update Firebase Auth profile (displayName only, photoURL not handled here yet)
+      if (firebaseUser.displayName !== displayName) {
+        await updateFirebaseAuthProfile(firebaseUser, { displayName });
+      }
 
-      // Update Firestore profile
-      const userDocRef = doc(firestoreDB, "users", firebaseUser.uid);
-      await updateDoc(userDocRef, {
-        displayName: displayName,
-        company: company,
-        // email is not updated here as it's tied to Auth and requires verification
-      });
+      // Update Firestore profile (displayName and company)
+      await updateUserProfile({ displayName, company });
 
       toast({
         title: "Perfil Actualizado",
@@ -93,6 +82,31 @@ export default function SettingsPage() {
     }
   };
 
+  const handleDeleteAccount = async () => {
+    if (!isFirebaseEnabled) {
+      toast({ title: "Error", description: "Firebase no está configurado.", variant: "destructive"});
+      return;
+    }
+    setIsDeletingAccount(true);
+    try {
+      await deleteUserAccount();
+      toast({
+        title: "Cuenta Eliminada",
+        description: "Tu cuenta ha sido eliminada permanentemente.",
+      });
+      // router.push('/auth/login'); // AuthContext logout or onAuthStateChanged should handle redirection
+    } catch (error) {
+      console.error("Error deleting account:", error);
+      toast({
+        title: "Error al Eliminar Cuenta",
+        description: (error as Error).message || "No se pudo eliminar tu cuenta.",
+        variant: "destructive",
+      });
+      setIsDeletingAccount(false);
+    }
+  };
+
+
   const activeTab = searchParams.get("tab") || "profile";
 
   if (authLoading) {
@@ -104,7 +118,7 @@ export default function SettingsPage() {
     );
   }
 
-  if (!firebaseUser) {
+  if (!firebaseUser || !appUser) { // Ensure appUser is also loaded
     return (
        <div className="flex flex-col items-center justify-center h-[calc(100vh-10rem)] text-center">
         <SettingsIcon className="h-16 w-16 text-muted-foreground mb-6" />
@@ -134,7 +148,7 @@ export default function SettingsPage() {
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="profile">Perfil</TabsTrigger>
           <TabsTrigger value="appearance" disabled>Apariencia</TabsTrigger>
-          <TabsTrigger value="notifications" disabled>Notificaciones</TabsTrigger>
+          <TabsTrigger value="account">Cuenta</TabsTrigger>
         </TabsList>
         
         <TabsContent value="profile">
@@ -142,7 +156,7 @@ export default function SettingsPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Información del Perfil</CardTitle>
-                <CardDescription>Actualice sus datos personales. Rol actual: <span className="font-semibold">{appUser?.role || 'No asignado'}</span></CardDescription>
+                <CardDescription>Actualice sus datos personales. Rol actual: <span className="font-semibold capitalize">{appUser?.role || 'No asignado'}</span></CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-1">
@@ -157,7 +171,7 @@ export default function SettingsPage() {
                 </div>
                 <div className="space-y-1">
                   <Label htmlFor="company">Empresa (Opcional)</Label>
-                  <Input id="company" value={company} onChange={(e) => setCompany(e.target.value)} />
+                  <Input id="company" value={company} onChange={(e) => setCompany(e.target.value)} placeholder="Nombre de su empresa" />
                 </div>
                 <Button type="submit" className="mt-4" disabled={isSavingProfile || !isFirebaseEnabled}>
                   {isSavingProfile ? "Guardando..." : "Guardar Cambios"}
@@ -188,21 +202,42 @@ export default function SettingsPage() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="notifications">
+        <TabsContent value="account">
           <Card>
             <CardHeader>
-              <CardTitle>Notificaciones</CardTitle>
-              <CardDescription>Administre sus preferencias de notificación (Próximamente).</CardDescription>
+              <CardTitle>Gestión de Cuenta</CardTitle>
+              <CardDescription>Opciones relacionadas con la seguridad y eliminación de su cuenta.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="flex items-center justify-between space-x-2 p-4 border rounded-md">
-                <div>
-                  <Label htmlFor="email-notifications" className="font-medium">Notificaciones por Correo</Label>
-                  <p className="text-sm text-muted-foreground">Reciba actualizaciones sobre sus pedidos y alertas importantes.</p>
-                </div>
-                <Switch id="email-notifications" defaultChecked disabled />
-              </div>
-              <Button className="mt-4" disabled>Guardar Preferencias</Button>
+                {/* Placeholder for password change - Requires re-authentication */}
+                <Button variant="outline" disabled>Cambiar Contraseña (Próximamente)</Button>
+                
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="destructive" disabled={!isFirebaseEnabled || isDeletingAccount}>
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      {isDeletingAccount ? "Eliminando..." : "Eliminar Cuenta Permanentemente"}
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>¿Está absolutamente seguro?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Esta acción no se puede deshacer. Esto eliminará permanentemente su cuenta
+                        y todos sus datos asociados de nuestros servidores.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleDeleteAccount} disabled={isDeletingAccount}>
+                        Sí, eliminar mi cuenta
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+                <FormDescription className="text-xs text-muted-foreground">
+                  La eliminación de la cuenta es irreversible.
+                </FormDescription>
             </CardContent>
           </Card>
         </TabsContent>

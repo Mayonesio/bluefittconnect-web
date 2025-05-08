@@ -11,13 +11,14 @@ import {
   onAuthStateChanged,
   GoogleAuthProvider,
   signInWithPopup,
+  deleteUser as deleteFirebaseAuthUser,
   type Auth as FirebaseAuthType
 } from "firebase/auth";
-import { doc, getDoc, setDoc, serverTimestamp, Timestamp } from "firebase/firestore";
+import { doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp, Timestamp, collection, getDocs } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import type { LoginFormValues } from "@/app/auth/login/page";
 import type { RegisterFormValues } from "@/app/auth/register/page";
-import type { AppUser } from "@/types/user";
+import type { AppUser, UserRole } from "@/types/user";
 
 interface AuthContextType {
   user: FirebaseUser | null;
@@ -28,6 +29,10 @@ interface AuthContextType {
   register: (data: RegisterFormValues) => Promise<FirebaseUser | null>;
   signInWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
+  updateUserProfile: (profileData: Partial<Pick<AppUser, 'displayName' | 'company' | 'photoURL'>>) => Promise<void>;
+  updateUserRoleByAdmin: (userId: string, newRole: UserRole) => Promise<void>;
+  deleteUserAccount: () => Promise<void>; // For self-deletion
+  // deleteUserByAdmin: (userId: string) => Promise<void>; // Requires Admin SDK for full auth deletion, client-side can only delete Firestore doc
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -75,21 +80,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return null;
   };
 
-  const createUserProfile = async (firebaseUser: FirebaseUser, role: AppUser['role'] = 'user'): Promise<AppUser> => {
+  const createUserProfile = async (firebaseUser: FirebaseUser, role: UserRole = 'user'): Promise<AppUser> => {
     if (!firestoreDB) throw new Error("Firestore no está configurado.");
     const newUserProfile: Omit<AppUser, 'createdAt'> & { createdAt: any } = {
       uid: firebaseUser.uid,
       email: firebaseUser.email,
-      displayName: firebaseUser.displayName,
+      displayName: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Nuevo Usuario',
       photoURL: firebaseUser.photoURL,
       role,
-      company: '', // Default company to empty string
+      company: '', 
       createdAt: serverTimestamp(),
     };
     const userDocRef = doc(firestoreDB, "users", firebaseUser.uid);
-    await setDoc(userDocRef, newUserProfile, { merge: true }); // Use merge:true to avoid overwriting if called multiple times (e.g. Google Sign In)
-    console.log(`[${new Date().toISOString()}] AuthContext createUserProfile: Profile created/merged in Firestore for UID: ${firebaseUser.uid}`);
-    return { ...newUserProfile, createdAt: new Date() } as AppUser; // Return with JS Date
+    await setDoc(userDocRef, newUserProfile, { merge: true }); 
+    console.log(`[${new Date().toISOString()}] AuthContext createUserProfile: Profile created/merged in Firestore for UID: ${firebaseUser.uid} with role ${role}`);
+    return { ...newUserProfile, createdAt: new Date() } as AppUser;
   };
 
 
@@ -120,14 +125,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (currentFirebaseUser) {
         let profile = await getUserProfile(currentFirebaseUser.uid);
         if (!profile) {
-          console.log(`[${timestamp}] AuthContext onAuthStateChanged: No Firestore profile found for ${currentFirebaseUser.uid}, creating default.`);
-          // Ensure display name and photoURL from Firebase Auth are used if available during initial profile creation
-          const updatedFirebaseUser = {
-            ...currentFirebaseUser,
-            displayName: currentFirebaseUser.displayName || currentFirebaseUser.email?.split('@')[0] || 'Usuario',
-            photoURL: currentFirebaseUser.photoURL || null,
-          };
-          profile = await createUserProfile(updatedFirebaseUser); 
+          console.log(`[${timestamp}] AuthContext onAuthStateChanged: No Firestore profile found for ${currentFirebaseUser.uid}, creating default user profile.`);
+          profile = await createUserProfile(currentFirebaseUser, 'user'); 
         }
         setAppUser(profile);
         console.log(`[${timestamp}] AuthContext onAuthStateChanged: AppUser set:`, profile);
@@ -186,12 +185,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       console.log(`[${timestamp}] AuthContext register: Attempting registration for email:`, data.email);
       const userCredential = await createUserWithEmailAndPassword(authInstance, data.email, data.password);
       console.log(`[${timestamp}] AuthContext register: Firebase Auth user CREATED for:`, userCredential.user.email);
-      // Create Firestore profile AFTER auth user is created. onAuthStateChanged will also pick this up, 
-      // but doing it here ensures profile exists before first redirect if any.
-      // Default role is 'user'.
       await createUserProfile(userCredential.user, 'user'); 
       console.log(`[${timestamp}] AuthContext register: Firestore profile CREATED for:`, userCredential.user.email);
-      // onAuthStateChanged handles setUser, setAppUser (from newly created profile), and setupSession.
       return userCredential.user;
     } catch (error) {
       return handleAuthOperationError(error, "register");
@@ -210,16 +205,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       const result = await signInWithPopup(authInstance, provider);
       console.log(`[${new Date().toISOString()}] AuthContext signInWithGoogle (POPUP): signInWithPopup promise RESOLVED successfully for ${result.user.email}.`);
-      // Check if Firestore profile exists, create if not. This is important for Google Sign-In where user might be new to Firestore.
       let profile = await getUserProfile(result.user.uid);
       if (!profile) {
         console.log(`[${new Date().toISOString()}] AuthContext signInWithGoogle: No Firestore profile after Google Sign-In for ${result.user.uid}, creating.`);
-        profile = await createUserProfile(result.user); // Creates with default 'user' role
-        setAppUser(profile); // Explicitly set appUser here as onAuthStateChanged might be slightly delayed or already fired.
-      } else {
-        setAppUser(profile); // Update appUser with existing profile
+        profile = await createUserProfile(result.user, 'user'); 
       }
-      // onAuthStateChanged will also fire and handle setUser, and potentially re-fetch/confirm appUser and session.
+      // onAuthStateChanged will handle setting user and appUser globally.
     } catch (error) {
       const authError = error as AuthError;
       const errorTimestamp = new Date().toISOString();
@@ -230,7 +221,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       } else {
         console.error(`[${errorTimestamp}] AuthContext signInWithGoogle (POPUP) ERROR: Code: ${authError.code}, Message: ${authError.message}`, authError);
       }
-      throw authError;
+      throw authError; 
     }
   };
 
@@ -264,12 +255,56 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const updateUserProfile = async (profileData: Partial<Pick<AppUser, 'displayName' | 'company' | 'photoURL'>>) => {
+    if (!user || !firestoreDB || !appUser) throw new Error("Usuario no autenticado o Firestore no disponible.");
+    const userDocRef = doc(firestoreDB, "users", user.uid);
+    await updateDoc(userDocRef, profileData);
+    setAppUser(prev => prev ? { ...prev, ...profileData } : null);
+  };
+
+  const updateUserRoleByAdmin = async (userId: string, newRole: UserRole) => {
+    if (!firestoreDB || !appUser || appUser.role !== 'admin') throw new Error("No autorizado o Firestore no disponible.");
+    const userDocRef = doc(firestoreDB, "users", userId);
+    await updateDoc(userDocRef, { role: newRole });
+    // Re-fetch or update local state for the admin page listing if necessary
+  };
+
+  const deleteUserAccount = async () => { // Self-deletion
+    if (!user || !firestoreDB) throw new Error("Usuario no autenticado o Firestore no disponible.");
+    const authInstance = firebaseAuthModule as FirebaseAuthType;
+    const firebaseUserToDelete = authInstance.currentUser;
+    if (!firebaseUserToDelete || firebaseUserToDelete.uid !== user.uid) {
+      throw new Error("Discrepancia de usuario al eliminar cuenta.");
+    }
+    try {
+      const userDocRef = doc(firestoreDB, "users", user.uid);
+      await deleteDoc(userDocRef);
+      await deleteFirebaseAuthUser(firebaseUserToDelete); // Deletes from Firebase Auth
+      // Logout will be handled by onAuthStateChanged
+    } catch (error) {
+      console.error("Error deleting user account:", error);
+      throw error;
+    }
+  };
+
   useEffect(() => {
     console.log(`[${new Date().toISOString()}] AuthContext: loading state changed: ${loading} (initialAuthCheckLoading: ${initialAuthCheckLoading}) User: ${user?.email || 'null'} AppUser Role: ${appUser?.role || 'null'}`);
   }, [loading, initialAuthCheckLoading, user, appUser]);
 
   return (
-    <AuthContext.Provider value={{ user, appUser, loading, login, register, signInWithGoogle, logout, isFirebaseEnabled }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      appUser, 
+      loading, 
+      login, 
+      register, 
+      signInWithGoogle, 
+      logout, 
+      isFirebaseEnabled,
+      updateUserProfile,
+      updateUserRoleByAdmin,
+      deleteUserAccount
+    }}>
       {children}
     </AuthContext.Provider>
   );
