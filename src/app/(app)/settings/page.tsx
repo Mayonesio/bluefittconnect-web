@@ -1,15 +1,16 @@
 // src/app/(app)/settings/page.tsx
 "use client";
 
+import React, { Suspense, useEffect, useState } from "react"; // Import Suspense
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label"; // Label from shadcn is fine standalone for non-RHF forms
+// Label from shadcn is fine standalone for non-RHF forms, but FormLabel from RHF is used inside the form.
+import { Label as ShadcnLabel } from "@/components/ui/label"; 
 import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/contexts/auth-context";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
 import { LogIn, Settings as SettingsIcon, UserCircle, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { updateProfile as updateFirebaseAuthProfile } from "firebase/auth";
@@ -46,13 +47,12 @@ const profileFormSchema = z.object({
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
 
 
-export default function SettingsPage() {
+function SettingsTabs() {
   const { user: firebaseUser, appUser, loading: authLoading, isFirebaseEnabled, updateUserProfile, deleteUserAccount } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
 
-  // State for email display as it's read-only and comes directly from auth
   const [email, setEmail] = useState(""); 
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
@@ -66,9 +66,7 @@ export default function SettingsPage() {
   });
 
   useEffect(() => {
-    if (!authLoading && !firebaseUser) {
-      router.push("/auth/login?redirect=/settings");
-    } else if (appUser) { 
+    if (appUser) { 
       form.reset({
         displayName: appUser.displayName || firebaseUser?.displayName || "",
         company: appUser.company || "",
@@ -81,7 +79,7 @@ export default function SettingsPage() {
       });
       setEmail(firebaseUser.email || "");
     }
-  }, [firebaseUser, appUser, authLoading, router, form]);
+  }, [firebaseUser, appUser, form]);
   
   const onProfileSubmit = async (data: ProfileFormValues) => {
     if (!firebaseUser || !isFirebaseEnabled || !appUser) {
@@ -90,14 +88,10 @@ export default function SettingsPage() {
     }
     setIsSavingProfile(true);
     try {
-      // Update Firebase Auth profile (displayName only)
       if (firebaseUser.displayName !== data.displayName) {
         await updateFirebaseAuthProfile(firebaseUser, { displayName: data.displayName });
       }
-
-      // Update Firestore profile (displayName and company)
       await updateUserProfile({ displayName: data.displayName, company: data.company });
-
       toast({
         title: "Perfil Actualizado",
         description: "Tu información de perfil ha sido guardada.",
@@ -126,7 +120,6 @@ export default function SettingsPage() {
         title: "Cuenta Eliminada",
         description: "Tu cuenta ha sido eliminada permanentemente.",
       });
-      // router.push('/auth/login'); // AuthContext logout or onAuthStateChanged should handle redirection
     } catch (error) {
       console.error("Error deleting account:", error);
       toast({
@@ -135,12 +128,149 @@ export default function SettingsPage() {
         variant: "destructive",
       });
     } finally {
-      setIsDeletingAccount(false); // Ensure this is set back
+      setIsDeletingAccount(false); 
     }
   };
 
-
   const activeTab = searchParams.get("tab") || "profile";
+
+  return (
+    <Tabs defaultValue={activeTab} className="w-full" onValueChange={(value) => router.push(`/settings?tab=${value}`, { scroll: false })}>
+      <TabsList className="grid w-full grid-cols-3">
+        <TabsTrigger value="profile">Perfil</TabsTrigger>
+        <TabsTrigger value="appearance" disabled>Apariencia</TabsTrigger>
+        <TabsTrigger value="account">Cuenta</TabsTrigger>
+      </TabsList>
+      
+      <TabsContent value="profile">
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onProfileSubmit)}>
+            <Card>
+              <CardHeader>
+                <CardTitle>Información del Perfil</CardTitle>
+                <CardDescription>Actualice sus datos personales. Rol actual: <span className="font-semibold capitalize">{appUser?.role || 'No asignado'}</span></CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="displayName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nombre Completo</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Su nombre completo" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormItem>
+                  <FormLabel htmlFor="email-display">Correo Electrónico</FormLabel>
+                  <Input id="email-display" type="email" value={email} readOnly disabled />
+                  <FormDescription className="text-xs text-muted-foreground">
+                    El correo electrónico no se puede cambiar desde aquí.
+                  </FormDescription>
+                </FormItem>
+
+                <FormField
+                  control={form.control}
+                  name="company"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Empresa (Opcional)</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Nombre de su empresa" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <Button type="submit" className="mt-4" disabled={isSavingProfile || !isFirebaseEnabled || !form.formState.isDirty}>
+                  {isSavingProfile ? "Guardando..." : "Guardar Cambios"}
+                </Button>
+                 {!form.formState.isDirty && form.formState.isSubmitted && (
+                   <p className="text-sm text-muted-foreground mt-2">No hay cambios para guardar.</p>
+                 )}
+              </CardContent>
+            </Card>
+          </form>
+        </Form>
+      </TabsContent>
+
+      <TabsContent value="appearance">
+        <Card>
+          <CardHeader>
+            <CardTitle>Apariencia</CardTitle>
+            <CardDescription>Personalice el aspecto de la aplicación (Próximamente).</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="space-y-2">
+              <ShadcnLabel>Tema</ShadcnLabel>
+              <p className="text-sm text-muted-foreground">
+                Actualmente, el cambio de tema (Claro/Oscuro) se gestiona según las preferencias de su sistema.
+              </p>
+            </div>
+             <div className="flex items-center space-x-2">
+              <Switch id="compact-mode" disabled />
+              <ShadcnLabel htmlFor="compact-mode">Activar Modo Compacto</ShadcnLabel>
+            </div>
+          </CardContent>
+        </Card>
+      </TabsContent>
+
+      <TabsContent value="account">
+        <Card>
+          <CardHeader>
+            <CardTitle>Gestión de Cuenta</CardTitle>
+            <CardDescription>Opciones relacionadas con la seguridad y eliminación de su cuenta.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+              <Button variant="outline" disabled>Cambiar Contraseña (Próximamente)</Button>
+              
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive" disabled={!isFirebaseEnabled || isDeletingAccount}>
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    {isDeletingAccount ? "Eliminando..." : "Eliminar Cuenta Permanentemente"}
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>¿Está absolutamente seguro?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Esta acción no se puede deshacer. Esto eliminará permanentemente su cuenta
+                      y todos sus datos asociados de nuestros servidores.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel onClick={() => setIsDeletingAccount(false)}>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDeleteAccount} disabled={isDeletingAccount}>
+                      Sí, eliminar mi cuenta
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+              <p className="text-xs text-muted-foreground">
+                La eliminación de la cuenta es irreversible.
+              </p>
+          </CardContent>
+        </Card>
+      </TabsContent>
+    </Tabs>
+  );
+}
+
+
+export default function SettingsPage() {
+  const { user: firebaseUser, appUser, loading: authLoading } = useAuth();
+  const router = useRouter();
+  
+  useEffect(() => {
+    if (!authLoading && !firebaseUser) {
+      router.push("/auth/login?redirect=/settings");
+    }
+  }, [firebaseUser, authLoading, router]);
 
   if (authLoading) {
     return (
@@ -176,132 +306,9 @@ export default function SettingsPage() {
           Administre su cuenta y las preferencias de la aplicación.
         </p>
       </header>
-
-      <Tabs defaultValue={activeTab} className="w-full" onValueChange={(value) => router.push(`/settings?tab=${value}`, { scroll: false })}>
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="profile">Perfil</TabsTrigger>
-          <TabsTrigger value="appearance" disabled>Apariencia</TabsTrigger>
-          <TabsTrigger value="account">Cuenta</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="profile">
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onProfileSubmit)}>
-              <Card>
-                <CardHeader>
-                  <CardTitle>Información del Perfil</CardTitle>
-                  <CardDescription>Actualice sus datos personales. Rol actual: <span className="font-semibold capitalize">{appUser?.role || 'No asignado'}</span></CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="displayName"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Nombre Completo</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Su nombre completo" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  {/* Email display - not a form field, but associated FormDescription needs context */}
-                  <FormItem>
-                    <FormLabel htmlFor="email-display">Correo Electrónico</FormLabel>
-                    <Input id="email-display" type="email" value={email} readOnly disabled />
-                    <FormDescription className="text-xs text-muted-foreground">
-                      El correo electrónico no se puede cambiar desde aquí.
-                    </FormDescription>
-                  </FormItem>
-
-                  <FormField
-                    control={form.control}
-                    name="company"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Empresa (Opcional)</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Nombre de su empresa" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <Button type="submit" className="mt-4" disabled={isSavingProfile || !isFirebaseEnabled || !form.formState.isDirty}>
-                    {isSavingProfile ? "Guardando..." : "Guardar Cambios"}
-                  </Button>
-                   {!form.formState.isDirty && form.formState.isSubmitted && (
-                     <p className="text-sm text-muted-foreground mt-2">No hay cambios para guardar.</p>
-                   )}
-                </CardContent>
-              </Card>
-            </form>
-          </Form>
-        </TabsContent>
-
-        <TabsContent value="appearance">
-          <Card>
-            <CardHeader>
-              <CardTitle>Apariencia</CardTitle>
-              <CardDescription>Personalice el aspecto de la aplicación (Próximamente).</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-2">
-                <Label>Tema</Label> {/* Using shadcn/ui Label here is fine as it's not part of a RHF form */}
-                <p className="text-sm text-muted-foreground">
-                  Actualmente, el cambio de tema (Claro/Oscuro) se gestiona según las preferencias de su sistema.
-                </p>
-              </div>
-               <div className="flex items-center space-x-2">
-                <Switch id="compact-mode" disabled />
-                <Label htmlFor="compact-mode">Activar Modo Compacto</Label>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="account">
-          <Card>
-            <CardHeader>
-              <CardTitle>Gestión de Cuenta</CardTitle>
-              <CardDescription>Opciones relacionadas con la seguridad y eliminación de su cuenta.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-                <Button variant="outline" disabled>Cambiar Contraseña (Próximamente)</Button>
-                
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button variant="destructive" disabled={!isFirebaseEnabled || isDeletingAccount}>
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      {isDeletingAccount ? "Eliminando..." : "Eliminar Cuenta Permanentemente"}
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>¿Está absolutamente seguro?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Esta acción no se puede deshacer. Esto eliminará permanentemente su cuenta
-                        y todos sus datos asociados de nuestros servidores.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel onClick={() => setIsDeletingAccount(false)}>Cancelar</AlertDialogCancel>
-                      <AlertDialogAction onClick={handleDeleteAccount} disabled={isDeletingAccount}>
-                        Sí, eliminar mi cuenta
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-                {/* Replaced FormDescription with a p tag as it's not tied to a form field here */}
-                <p className="text-xs text-muted-foreground">
-                  La eliminación de la cuenta es irreversible.
-                </p>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+      <Suspense fallback={<div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div><p className="ml-4">Cargando pestañas de configuración...</p></div>}>
+        <SettingsTabs />
+      </Suspense>
     </div>
   );
 }
