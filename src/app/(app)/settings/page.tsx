@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Label } from "@/components/ui/label"; // Label from shadcn is fine standalone for non-RHF forms
 import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/contexts/auth-context";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -14,7 +14,18 @@ import { LogIn, Settings as SettingsIcon, UserCircle, Trash2 } from "lucide-reac
 import Link from "next/link";
 import { updateProfile as updateFirebaseAuthProfile } from "firebase/auth";
 import { useToast } from "@/hooks/use-toast";
-import { FormDescription } from "@/components/ui/form";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel, // This is react-hook-form's FormLabel
+  FormMessage,
+} from "@/components/ui/form";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -27,6 +38,13 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
+const profileFormSchema = z.object({
+  displayName: z.string().min(1, "El nombre completo es obligatorio."),
+  company: z.string().optional(),
+  // Email is not part of the editable form data, so not in schema
+});
+type ProfileFormValues = z.infer<typeof profileFormSchema>;
+
 
 export default function SettingsPage() {
   const { user: firebaseUser, appUser, loading: authLoading, isFirebaseEnabled, updateUserProfile, deleteUserAccount } = useAuth();
@@ -34,37 +52,51 @@ export default function SettingsPage() {
   const searchParams = useSearchParams();
   const { toast } = useToast();
 
-  const [displayName, setDisplayName] = useState("");
-  const [email, setEmail] = useState(""); // Email is read-only from auth
-  const [company, setCompany] = useState("");
+  // State for email display as it's read-only and comes directly from auth
+  const [email, setEmail] = useState(""); 
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+
+  const form = useForm<ProfileFormValues>({
+    resolver: zodResolver(profileFormSchema),
+    defaultValues: {
+      displayName: "",
+      company: "",
+    },
+  });
 
   useEffect(() => {
     if (!authLoading && !firebaseUser) {
       router.push("/auth/login?redirect=/settings");
-    } else if (appUser) { // firebaseUser will also be present if appUser is
-      setDisplayName(appUser.displayName || firebaseUser?.displayName || "");
+    } else if (appUser) { 
+      form.reset({
+        displayName: appUser.displayName || firebaseUser?.displayName || "",
+        company: appUser.company || "",
+      });
       setEmail(appUser.email || firebaseUser?.email || "");
-      setCompany(appUser.company || "");
+    } else if (firebaseUser && !appUser) { // Fallback if appUser is not loaded but firebaseUser is
+      form.reset({
+        displayName: firebaseUser.displayName || "",
+        company: "",
+      });
+      setEmail(firebaseUser.email || "");
     }
-  }, [firebaseUser, appUser, authLoading, router]);
+  }, [firebaseUser, appUser, authLoading, router, form]);
   
-  const handleProfileSave = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const onProfileSubmit = async (data: ProfileFormValues) => {
     if (!firebaseUser || !isFirebaseEnabled || !appUser) {
       toast({ title: "Error", description: "No se puede guardar el perfil. Usuario no autenticado o Firebase no configurado.", variant: "destructive"});
       return;
     }
     setIsSavingProfile(true);
     try {
-      // Update Firebase Auth profile (displayName only, photoURL not handled here yet)
-      if (firebaseUser.displayName !== displayName) {
-        await updateFirebaseAuthProfile(firebaseUser, { displayName });
+      // Update Firebase Auth profile (displayName only)
+      if (firebaseUser.displayName !== data.displayName) {
+        await updateFirebaseAuthProfile(firebaseUser, { displayName: data.displayName });
       }
 
       // Update Firestore profile (displayName and company)
-      await updateUserProfile({ displayName, company });
+      await updateUserProfile({ displayName: data.displayName, company: data.company });
 
       toast({
         title: "Perfil Actualizado",
@@ -102,7 +134,8 @@ export default function SettingsPage() {
         description: (error as Error).message || "No se pudo eliminar tu cuenta.",
         variant: "destructive",
       });
-      setIsDeletingAccount(false);
+    } finally {
+      setIsDeletingAccount(false); // Ensure this is set back
     }
   };
 
@@ -118,7 +151,7 @@ export default function SettingsPage() {
     );
   }
 
-  if (!firebaseUser || !appUser) { // Ensure appUser is also loaded
+  if (!firebaseUser || !appUser) { 
     return (
        <div className="flex flex-col items-center justify-center h-[calc(100vh-10rem)] text-center">
         <SettingsIcon className="h-16 w-16 text-muted-foreground mb-6" />
@@ -152,33 +185,60 @@ export default function SettingsPage() {
         </TabsList>
         
         <TabsContent value="profile">
-          <form onSubmit={handleProfileSave}>
-            <Card>
-              <CardHeader>
-                <CardTitle>Información del Perfil</CardTitle>
-                <CardDescription>Actualice sus datos personales. Rol actual: <span className="font-semibold capitalize">{appUser?.role || 'No asignado'}</span></CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-1">
-                  <Label htmlFor="displayName">Nombre Completo</Label>
-                  <Input id="displayName" value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
-                </div>
-                
-                <div className="space-y-1">
-                  <Label htmlFor="email">Correo Electrónico</Label>
-                  <Input id="email" type="email" value={email} readOnly disabled />
-                  <FormDescription className="text-xs text-muted-foreground">El correo electrónico no se puede cambiar desde aquí.</FormDescription>
-                </div>
-                <div className="space-y-1">
-                  <Label htmlFor="company">Empresa (Opcional)</Label>
-                  <Input id="company" value={company} onChange={(e) => setCompany(e.target.value)} placeholder="Nombre de su empresa" />
-                </div>
-                <Button type="submit" className="mt-4" disabled={isSavingProfile || !isFirebaseEnabled}>
-                  {isSavingProfile ? "Guardando..." : "Guardar Cambios"}
-                </Button>
-              </CardContent>
-            </Card>
-          </form>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onProfileSubmit)}>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Información del Perfil</CardTitle>
+                  <CardDescription>Actualice sus datos personales. Rol actual: <span className="font-semibold capitalize">{appUser?.role || 'No asignado'}</span></CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="displayName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Nombre Completo</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Su nombre completo" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  {/* Email display - not a form field, but associated FormDescription needs context */}
+                  <FormItem>
+                    <FormLabel htmlFor="email-display">Correo Electrónico</FormLabel>
+                    <Input id="email-display" type="email" value={email} readOnly disabled />
+                    <FormDescription className="text-xs text-muted-foreground">
+                      El correo electrónico no se puede cambiar desde aquí.
+                    </FormDescription>
+                  </FormItem>
+
+                  <FormField
+                    control={form.control}
+                    name="company"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Empresa (Opcional)</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Nombre de su empresa" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <Button type="submit" className="mt-4" disabled={isSavingProfile || !isFirebaseEnabled || !form.formState.isDirty}>
+                    {isSavingProfile ? "Guardando..." : "Guardar Cambios"}
+                  </Button>
+                   {!form.formState.isDirty && form.formState.isSubmitted && (
+                     <p className="text-sm text-muted-foreground mt-2">No hay cambios para guardar.</p>
+                   )}
+                </CardContent>
+              </Card>
+            </form>
+          </Form>
         </TabsContent>
 
         <TabsContent value="appearance">
@@ -189,7 +249,7 @@ export default function SettingsPage() {
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-2">
-                <Label>Tema</Label>
+                <Label>Tema</Label> {/* Using shadcn/ui Label here is fine as it's not part of a RHF form */}
                 <p className="text-sm text-muted-foreground">
                   Actualmente, el cambio de tema (Claro/Oscuro) se gestiona según las preferencias de su sistema.
                 </p>
@@ -209,7 +269,6 @@ export default function SettingsPage() {
               <CardDescription>Opciones relacionadas con la seguridad y eliminación de su cuenta.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-                {/* Placeholder for password change - Requires re-authentication */}
                 <Button variant="outline" disabled>Cambiar Contraseña (Próximamente)</Button>
                 
                 <AlertDialog>
@@ -228,16 +287,17 @@ export default function SettingsPage() {
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                      <AlertDialogCancel onClick={() => setIsDeletingAccount(false)}>Cancelar</AlertDialogCancel>
                       <AlertDialogAction onClick={handleDeleteAccount} disabled={isDeletingAccount}>
                         Sí, eliminar mi cuenta
                       </AlertDialogAction>
                     </AlertDialogFooter>
                   </AlertDialogContent>
                 </AlertDialog>
-                <FormDescription className="text-xs text-muted-foreground">
+                {/* Replaced FormDescription with a p tag as it's not tied to a form field here */}
+                <p className="text-xs text-muted-foreground">
                   La eliminación de la cuenta es irreversible.
-                </FormDescription>
+                </p>
             </CardContent>
           </Card>
         </TabsContent>
