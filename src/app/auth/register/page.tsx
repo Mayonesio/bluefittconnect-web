@@ -46,22 +46,28 @@ export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  const pageInteractionDisabled = authContextLoading || isEmailPasswordLoading || isGoogleLoading || !isFirebaseEnabled;
+
   useEffect(() => {
-    console.log(`RegisterPage useEffect: user: ${!!user}, authContextLoading: ${authContextLoading}, isFirebaseEnabled: ${isFirebaseEnabled}, localEmailLoading: ${isEmailPasswordLoading}, localGoogleLoading: ${isGoogleLoading}`);
+    const timestamp = new Date().toISOString();
+    console.log(`[${timestamp}] RegisterPage Redirect useEffect: user: ${!!user}, authContextLoading: ${authContextLoading}, isFirebaseEnabled: ${isFirebaseEnabled}`);
     
     if (user && !authContextLoading && isFirebaseEnabled) {
       const redirectUrl = searchParams.get("redirect") || "/";
-      console.log(`RegisterPage useEffect: User authenticated and all loading finished. Redirecting to: ${redirectUrl}`);
+      console.log(`[${timestamp}] RegisterPage Redirect useEffect: User authenticated, NOT auth loading, Firebase enabled. REDIRECTING to: ${redirectUrl}`);
       router.push(redirectUrl);
-    } else if (user && authContextLoading) {
-      console.log(`RegisterPage useEffect: User present, but auth context still loading. Waiting for authContextLoading to be false.`);
     } else {
-      console.log(`RegisterPage useEffect: No user or Firebase not ready/still loading. No redirect.`);
+      console.log(`[${timestamp}] RegisterPage Redirect useEffect: Conditions NOT MET for redirect.`);
+       if (!user) console.log(`[${timestamp}] RegisterPage Redirect useEffect: Reason: No user.`);
+       if (authContextLoading) console.log(`[${timestamp}] RegisterPage Redirect useEffect: Reason: AuthContext still loading.`);
+       if (!isFirebaseEnabled) console.log(`[${timestamp}] RegisterPage Redirect useEffect: Reason: Firebase not enabled.`);
     }
   }, [user, authContextLoading, router, searchParams, isFirebaseEnabled]);
 
   useEffect(() => {
+    const timestamp = new Date().toISOString();
     if (!isFirebaseEnabled && !authContextLoading && !user) {
+      console.log(`[${timestamp}] RegisterPage FirebaseErrorToast useEffect: Firebase NOT enabled, NOT auth loading, NO user. Showing persistent error toast.`);
       toast({
         title: "Error de Configuración de Firebase",
         description: "Las funciones de autenticación están deshabilitadas. Contacte al administrador o revise la configuración de Firebase.",
@@ -81,7 +87,9 @@ export default function RegisterPage() {
   });
 
   const onSubmit = async (data: RegisterFormValues) => {
+    const timestamp = new Date().toISOString();
      if (!isFirebaseEnabled) {
+      console.warn(`[${timestamp}] RegisterPage onSubmit: Firebase NOT configured. Toasting and returning.`);
       toast({
         title: "Configuración Incompleta",
         description: "Firebase no está configurado. No se puede registrar.",
@@ -90,17 +98,18 @@ export default function RegisterPage() {
       return;
     }
     setIsEmailPasswordLoading(true);
-    console.log("RegisterPage onSubmit: Attempting email/password registration...");
+    console.log(`[${timestamp}] RegisterPage onSubmit: Attempting email/password registration for ${data.email}...`);
     try {
       await register(data);
       toast({
         title: "¡Registro Exitoso!",
         description: "Tu cuenta ha sido creada. Bienvenido a Blufitt Connect.",
       });
+      console.log(`[${timestamp}] RegisterPage onSubmit: Email/password registration SUCCESSFUL for ${data.email}. Redirection useEffect will handle next steps.`);
       // Redirection handled by useEffect
     } catch (error) {
       const authError = error as AuthError;
-      console.error("RegisterPage onSubmit: Registration error:", authError.code, authError.message);
+      console.error(`[${timestamp}] RegisterPage onSubmit: Registration ERROR for ${data.email}: Code: ${authError.code}, Message: ${authError.message}`, authError);
       let errorMessage = "Error al registrar. Por favor, inténtalo de nuevo.";
       if (authError.code === "auth/email-already-in-use") {
         errorMessage = "Este correo electrónico ya está registrado.";
@@ -120,11 +129,14 @@ export default function RegisterPage() {
       });
     } finally {
       setIsEmailPasswordLoading(false);
+      console.log(`[${new Date().toISOString()}] RegisterPage onSubmit: FINALLY block for ${data.email}. isEmailPasswordLoading set to false.`);
     }
   };
 
   const handleGoogleSignUp = async () => {
+    const timestamp = new Date().toISOString();
     if (!isFirebaseEnabled) {
+       console.warn(`[${timestamp}] RegisterPage handleGoogleSignUp: Firebase NOT configured. Toasting and returning.`);
       toast({
         title: "Configuración Incompleta",
         description: "Firebase no está configurado. No se puede registrar con Google.",
@@ -133,25 +145,26 @@ export default function RegisterPage() {
       return;
     }
     setIsGoogleLoading(true);
-    console.log("RegisterPage handleGoogleSignUp: Attempting Google sign-in (redirect)...");
+    console.log(`[${timestamp}] RegisterPage handleGoogleSignUp: Attempting Google sign-in (redirect)... isGoogleLoading: true`);
     try {
-      await signInWithGoogle(); // Triggers redirect
-      // No direct user returned. Flow continues via getRedirectResult in AuthContext.
+      await signInWithGoogle(); 
+      console.log(`[${timestamp}] RegisterPage handleGoogleSignUp: signInWithGoogle call completed (should have redirected).`);
     } catch (error) {
       const authError = error as AuthError;
-      console.error("RegisterPage handleGoogleSignUp: Error initiating Google sign-in redirect:", authError.code, authError.message);
-      // This error occurs if signInWithRedirect itself fails before navigation.
+      console.error(`[${timestamp}] RegisterPage handleGoogleSignUp: Error INITIATING Google sign-in redirect: Code: ${authError.code}, Message: ${authError.message}`, authError);
       toast({
         title: "Error con Google Sign-Up",
         description: authError.message || "No se pudo iniciar el proceso de registro con Google.",
         variant: "destructive",
       });
       setIsGoogleLoading(false);
+      console.log(`[${timestamp}] RegisterPage handleGoogleSignUp: Error caught, isGoogleLoading set to false.`);
     }
   };
 
+  const timestampRenderStart = new Date().toISOString();
   if (authContextLoading && !user) {
-    console.log("RegisterPage: AuthContext loading, no user. Displaying loading spinner.");
+    console.log(`[${timestampRenderStart}] RegisterPage RENDER: AuthContext loading (combined: ${authContextLoading}), NO user. Displaying loading spinner.`);
     return (
       <div className="flex flex-col items-center justify-center h-screen">
         <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-primary"></div>
@@ -163,7 +176,7 @@ export default function RegisterPage() {
   }
   
   if (!isFirebaseEnabled && !authContextLoading && !user) {
-     console.log("RegisterPage: Firebase not enabled, not auth loading, no user. Displaying config error.");
+     console.log(`[${timestampRenderStart}] RegisterPage RENDER: Firebase NOT enabled, NOT auth loading, NO user. Displaying config error card.`);
      return (
       <Card className="w-full max-w-md shadow-xl">
         <CardHeader className="text-center">
@@ -183,8 +196,7 @@ export default function RegisterPage() {
      );
   }
   
-  const pageInteractionDisabled = authContextLoading || isEmailPasswordLoading || isGoogleLoading || !isFirebaseEnabled;
-  console.log(`RegisterPage render: pageInteractionDisabled: ${pageInteractionDisabled} (authCtxLoading: ${authContextLoading}, emailLoading: ${isEmailPasswordLoading}, googleLoading: ${isGoogleLoading}, firebaseEnabled: ${isFirebaseEnabled})`);
+  console.log(`[${timestampRenderStart}] RegisterPage RENDER: Rendering form. pageInteractionDisabled: ${pageInteractionDisabled} (authCtxLoading: ${authContextLoading}, emailLoading: ${isEmailPasswordLoading}, googleLoading: ${isGoogleLoading}, firebaseEnabled: ${isFirebaseEnabled}) User: ${!!user}`);
 
   return (
     <Card className="w-full max-w-md shadow-xl">
@@ -298,12 +310,12 @@ export default function RegisterPage() {
           onClick={handleGoogleSignUp}
           disabled={pageInteractionDisabled}
         >
-          {isGoogleLoading || (authContextLoading && !user) ? (
+          {isGoogleLoading ? (
             <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-primary mr-2"></div>
           ) : (
             <GoogleLogo className="mr-2 h-5 w-5" />
           )}
-          {isGoogleLoading || (authContextLoading && !user) ? "Conectando..." : "Registrarse con Google"}
+          {isGoogleLoading ? "Conectando..." : "Registrarse con Google"}
         </Button>
 
         <p className="mt-6 text-center text-sm text-muted-foreground">
@@ -316,3 +328,5 @@ export default function RegisterPage() {
     </Card>
   );
 }
+
+    

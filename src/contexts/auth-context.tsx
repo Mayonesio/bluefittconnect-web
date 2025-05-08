@@ -10,7 +10,6 @@ import {
   signOut, 
   onAuthStateChanged,
   GoogleAuthProvider,
-  // signInWithPopup, // No longer used
   signInWithRedirect,
   getRedirectResult,    
   type Auth as FirebaseAuthType 
@@ -25,7 +24,7 @@ interface AuthContextType {
   isFirebaseEnabled: boolean; 
   login: (data: LoginFormValues) => Promise<FirebaseUser | null>;
   register: (data: RegisterFormValues) => Promise<FirebaseUser | null>;
-  signInWithGoogle: () => Promise<void>; // Changed return type
+  signInWithGoogle: () => Promise<void>; 
   logout: () => Promise<void>;
 }
 
@@ -34,119 +33,130 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [initialAuthCheckLoading, setInitialAuthCheckLoading] = useState(true);
-  const [isProcessingRedirect, setIsProcessingRedirect] = useState(true);
+  const [isProcessingRedirect, setIsProcessingRedirect] = useState(true); // Start true, as we always check on load
   const isFirebaseEnabled = !!firebaseAuthModule; 
   const router = useRouter();
 
   const combinedLoading = initialAuthCheckLoading || isProcessingRedirect;
 
   const setupSession = async (firebaseUser: FirebaseUser | null): Promise<boolean> => {
+    const timestamp = new Date().toISOString();
     if (firebaseUser) {
       try {
         const token = await firebaseUser.getIdToken(true); 
         document.cookie = `firebaseAuthToken=${token}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`; 
-        console.log("AuthContext setupSession: Token cookie set for user:", firebaseUser.email);
+        console.log(`[${timestamp}] AuthContext setupSession: Token cookie SET for user:`, firebaseUser.email);
         return true;
       } catch (error) {
-        console.error("AuthContext setupSession: Error setting auth token cookie:", error);
+        console.error(`[${timestamp}] AuthContext setupSession: Error setting auth token cookie for ${firebaseUser.email}:`, error);
         document.cookie = "firebaseAuthToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax";
         return false; 
       }
     } else {
       document.cookie = "firebaseAuthToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax";
-      console.log("AuthContext setupSession: Token cookie cleared (user is null).");
+      console.log(`[${timestamp}] AuthContext setupSession: Token cookie CLEARED (user is null).`);
       return true; 
     }
   };
 
   useEffect(() => {
-    console.log("AuthContext useEffect: Initializing auth state listener. Firebase enabled:", isFirebaseEnabled);
+    const timestampInit = new Date().toISOString();
+    console.log(`[${timestampInit}] AuthContext useEffect: Initializing. Firebase enabled: ${isFirebaseEnabled}. Current user state: ${user?.email || 'null'}`);
+
     if (!isFirebaseEnabled || !firebaseAuthModule) { 
       setInitialAuthCheckLoading(false);
-      setIsProcessingRedirect(false); // Ensure all loading states are false
+      setIsProcessingRedirect(false); 
       setUser(null);
       setupSession(null); 
       console.warn(
-          "AuthContext: Firebase Auth module is not initialized. Authentication features disabled."
+          `[${timestampInit}] AuthContext: Firebase Auth module NOT INITIALIZED. Auth features disabled.`
       );
       return;
     }
 
     const authInstance = firebaseAuthModule as FirebaseAuthType; 
     
-    // Listener for general auth state changes (e.g., manual login, logout, token expiry)
-    const unsubscribeAuthState = onAuthStateChanged(authInstance, async (currentFirebaseUser) => {
-      console.log("AuthContext onAuthStateChanged: User state changed. Current user:", currentFirebaseUser?.email || null);
-      setUser(currentFirebaseUser);
-      await setupSession(currentFirebaseUser);
-      setInitialAuthCheckLoading(false); // Initial check via onAuthStateChanged is done
-      console.log("AuthContext onAuthStateChanged: User and loading state updated. InitialAuthLoading:", false, "User:", currentFirebaseUser?.email || null);
-    });
-
-    // Check for redirect result on initial load
     const processRedirect = async () => {
-      console.log("AuthContext: Checking for redirect result...");
-      setIsProcessingRedirect(true);
+      const timestampStart = new Date().toISOString();
+      // setIsProcessingRedirect(true) is already set initially or by previous effect cleanup
+      console.log(`[${timestampStart}] AuthContext: processRedirect START. Current user before getRedirectResult: ${authInstance.currentUser?.email || 'null'}`);
       try {
         const result = await getRedirectResult(authInstance);
+        const timestampResult = new Date().toISOString();
+        console.log(`[${timestampResult}] AuthContext: getRedirectResult raw result:`, result);
         if (result && result.user) {
-          console.log("AuthContext getRedirectResult: Success. User:", result.user.email);
-          // Set user and session. onAuthStateChanged might also fire, but this ensures immediate update.
+          console.log(`[${timestampResult}] AuthContext getRedirectResult: SUCCESS. User from redirect: ${result.user.email}`);
           setUser(result.user); 
           await setupSession(result.user);
+          setInitialAuthCheckLoading(false); // Redirect result is a definitive auth state.
         } else {
-          console.log("AuthContext getRedirectResult: No pending redirect result or no user found.");
+          console.log(`[${timestampResult}] AuthContext getRedirectResult: No pending redirect result or no user from result.`);
         }
       } catch (error) {
         const authError = error as AuthError;
-        console.error("AuthContext getRedirectResult Error:", authError.code, authError.message);
-        // Handle specific errors like 'auth/account-exists-with-different-credential'
-        // Potentially show a toast to the user from here or let the page handle it
+        const timestampError = new Date().toISOString();
+        console.error(`[${timestampError}] AuthContext getRedirectResult ERROR: Code: ${authError.code}, Message: ${authError.message}`, authError);
         if (authError.code === 'auth/account-exists-with-different-credential') {
-           // TODO: Consider how to inform the user (e.g., toast from context or propogate error)
-           console.warn("AuthContext: An account already exists with the same email address but different sign-in credentials. Sign in using a provider associated with this email address.");
+           console.warn(`[${timestampError}] AuthContext: Account exists with different credentials.`);
         }
-        await setupSession(null); // Clear session on error
-        setUser(null);
+        // Do not set user to null or clear session here; let onAuthStateChanged handle the definitive state if redirect fails.
       } finally {
-        setIsProcessingRedirect(false); // Finished processing redirect
-        console.log("AuthContext getRedirectResult: Processing finished. IsProcessingRedirect:", false);
+        setIsProcessingRedirect(false); 
+        const timestampEnd = new Date().toISOString();
+        console.log(`[${timestampEnd}] AuthContext: processRedirect END. isProcessingRedirect: false. User state: ${authInstance.currentUser?.email || 'null'}`);
       }
     };
     
-    processRedirect();
+    const unsubscribeAuthState = onAuthStateChanged(authInstance, async (currentFirebaseUser) => {
+      const timestamp = new Date().toISOString();
+      console.log(`[${timestamp}] AuthContext onAuthStateChanged: FIRED. User: ${currentFirebaseUser?.email || 'null'}. isProcessingRedirect: ${isProcessingRedirect}. initialAuthCheckLoading: ${initialAuthCheckLoading}`);
+      
+      setUser(currentFirebaseUser);
+      await setupSession(currentFirebaseUser); // Ensure session matches this state
+      
+      // Only set initialAuthCheckLoading to false. isProcessingRedirect is handled by processRedirect.
+      if(initialAuthCheckLoading) {
+        setInitialAuthCheckLoading(false); 
+      }
+      console.log(`[${timestamp}] AuthContext onAuthStateChanged: State updated. initialAuthCheckLoading: ${initialAuthCheckLoading}, User: ${currentFirebaseUser?.email || 'null'}`);
+    });
+
+    processRedirect(); // Call after onAuthStateChanged is set up so it can react to changes from getRedirectResult
 
     return () => {
-      console.log("AuthContext useEffect: Cleaning up auth state listener.");
+      const timestampCleanup = new Date().toISOString();
+      console.log(`[${timestampCleanup}] AuthContext useEffect: CLEANUP auth state listener.`);
       unsubscribeAuthState();
     }
-  }, [isFirebaseEnabled]); 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isFirebaseEnabled]); // Rerun if isFirebaseEnabled changes (e.g. from null to initialized)
 
   const handleAuthOperationError = async (error: any, operationName: string): Promise<null> => {
-    console.error(`AuthContext ${operationName}: Error:`, error);
+    const timestamp = new Date().toISOString();
+    console.error(`[${timestamp}] AuthContext ${operationName}: Error:`, error);
     await setupSession(null); 
     const authError = error as AuthError;
-    // setUser(null) will be handled by onAuthStateChanged if signOut is called or error implies invalid user
     throw authError; 
   };
 
   const login = async (data: LoginFormValues): Promise<FirebaseUser | null> => {
+    const timestamp = new Date().toISOString();
     if (!isFirebaseEnabled || !firebaseAuthModule) {
-      console.error("AuthContext login: Firebase not configured.");
+      console.error(`[${timestamp}] AuthContext login: Firebase not configured.`);
       throw new Error("Firebase no está configurado correctamente. No se puede iniciar sesión.");
     }
     const authInstance = firebaseAuthModule as FirebaseAuthType;
     try {
-      console.log("AuthContext login: Attempting sign-in for email:", data.email);
+      console.log(`[${timestamp}] AuthContext login: Attempting sign-in for email:`, data.email);
       const userCredential = await signInWithEmailAndPassword(authInstance, data.email, data.password);
       if (userCredential.user) {
         const sessionSetupSuccess = await setupSession(userCredential.user);
         if (!sessionSetupSuccess) {
-          console.warn("AuthContext login: Session setup failed after login. Signing out.");
+          console.warn(`[${timestamp}] AuthContext login: Session setup FAILED after login. Signing out.`);
           await signOut(authInstance); 
           throw new Error("Error al configurar la sesión después del inicio de sesión. Inténtalo de nuevo.");
         }
-        console.log("AuthContext login: Sign-in and session setup successful for:", userCredential.user.email);
+        console.log(`[${timestamp}] AuthContext login: Sign-in and session setup SUCCESSFUL for:`, userCredential.user.email);
       }
       return userCredential.user; 
     } catch (error) {
@@ -155,22 +165,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const register = async (data: RegisterFormValues): Promise<FirebaseUser | null> => {
+    const timestamp = new Date().toISOString();
     if (!isFirebaseEnabled || !firebaseAuthModule) {
-      console.error("AuthContext register: Firebase not configured.");
+      console.error(`[${timestamp}] AuthContext register: Firebase not configured.`);
       throw new Error("Firebase no está configurado correctamente. No se puede registrar.");
     }
     const authInstance = firebaseAuthModule as FirebaseAuthType;
     try {
-      console.log("AuthContext register: Attempting registration for email:", data.email);
+      console.log(`[${timestamp}] AuthContext register: Attempting registration for email:`, data.email);
       const userCredential = await createUserWithEmailAndPassword(authInstance, data.email, data.password);
       if (userCredential.user) {
          const sessionSetupSuccess = await setupSession(userCredential.user);
         if (!sessionSetupSuccess) {
-          console.warn("AuthContext register: Session setup failed after registration. Signing out.");
+          console.warn(`[${timestamp}] AuthContext register: Session setup FAILED after registration. Signing out.`);
           await signOut(authInstance);
           throw new Error("Error al configurar la sesión después del registro. Inténtalo de nuevo.");
         }
-        console.log("AuthContext register: Registration and session setup successful for:", userCredential.user.email);
+        console.log(`[${timestamp}] AuthContext register: Registration and session setup SUCCESSFUL for:`, userCredential.user.email);
       }
       return userCredential.user;
     } catch (error) {
@@ -179,48 +190,53 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signInWithGoogle = async (): Promise<void> => {
+    const timestamp = new Date().toISOString();
     if (!isFirebaseEnabled || !firebaseAuthModule) {
-      console.error("AuthContext signInWithGoogle: Firebase not configured.");
+      console.error(`[${timestamp}] AuthContext signInWithGoogle: Firebase not configured.`);
       throw new Error("Firebase no está configurado correctamente. No se puede iniciar sesión con Google.");
     }
     const authInstance = firebaseAuthModule as FirebaseAuthType;
     const provider = new GoogleAuthProvider();
-    console.log(`AuthContext signInWithGoogle: Using auth domain: ${authInstance.config.authDomain}`); 
+    console.log(`[${timestamp}] AuthContext signInWithGoogle: Using auth domain: ${authInstance.config.authDomain}`); 
     try {
-      console.log("AuthContext signInWithGoogle: Attempting Google sign-in with redirect.");
+      console.log(`[${timestamp}] AuthContext signInWithGoogle: Attempting Google sign-in with REDIRECT.`);
+      // DO NOT set isProcessingRedirect here. It's for the *return* journey.
+      // LoginPage's local isGoogleLoading handles UI during this initiation.
       await signInWithRedirect(authInstance, provider);
-      // Page will redirect, user will be caught by getRedirectResult on page load.
+      // Page will redirect. Code execution stops here for this path.
     } catch (error) {
-      console.error("AuthContext signInWithGoogle: Error initiating redirect:", error);
+      const errorTimestamp = new Date().toISOString();
+      console.error(`[${errorTimestamp}] AuthContext signInWithGoogle: Error INITIATING REDIRECT:`, error);
       const authError = error as AuthError;
-      // This error happens *before* redirect, e.g. network issue, config.
-      // It's unlikely to be auth/popup-closed-by-user here.
+      // If signInWithRedirect itself fails (e.g. network, misconfig), this catch runs.
+      // isProcessingRedirect should not be managed here.
       throw authError;
     }
   };
 
   const logout = async () => {
-    console.log("AuthContext logout: Attempting logout.");
+    const timestamp = new Date().toISOString();
+    console.log(`[${timestamp}] AuthContext logout: Attempting logout. Current user: ${user?.email}`);
     if (!isFirebaseEnabled || !firebaseAuthModule) {
       setUser(null);
       setInitialAuthCheckLoading(false); 
       setIsProcessingRedirect(false);
       await setupSession(null); 
       router.push("/auth/login");
-      console.warn("AuthContext logout: Firebase not configured. Session closed locally.");
+      console.warn(`[${timestamp}] AuthContext logout: Firebase not configured. Session closed locally.`);
       return;
     }
     const authInstance = firebaseAuthModule as FirebaseAuthType;
     try {
       await signOut(authInstance);
-      console.log("AuthContext logout: Firebase signOut successful. onAuthStateChanged will handle global state updates & cookie clearing.");
+      console.log(`[${timestamp}] AuthContext logout: Firebase signOut successful. onAuthStateChanged will handle global state.`);
       // onAuthStateChanged will set user to null and call setupSession(null).
       // It will also set initialAuthCheckLoading to false.
-      // We should also ensure isProcessingRedirect is false.
-      setIsProcessingRedirect(false);
+      setIsProcessingRedirect(false); // Explicitly set this to false as part of logout.
       router.push("/auth/login"); 
     } catch (error) {
-      console.error("AuthContext logout: Error during Firebase signOut:", error);
+      const errorTimestamp = new Date().toISOString();
+      console.error(`[${errorTimestamp}] AuthContext logout: Error during Firebase signOut:`, error);
       await setupSession(null); 
       setUser(null); 
       setInitialAuthCheckLoading(false);
@@ -230,6 +246,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       throw authError;
     }
   };
+
+  // Log combinedLoading state changes
+  useEffect(() => {
+    console.log(`[${new Date().toISOString()}] AuthContext: combinedLoading state changed: ${combinedLoading} (initialAuth: ${initialAuthCheckLoading}, processingRedirect: ${isProcessingRedirect}) User: ${user?.email || 'null'}`);
+  }, [combinedLoading, initialAuthCheckLoading, isProcessingRedirect, user]);
+
 
   return (
     <AuthContext.Provider value={{ user, loading: combinedLoading, login, register, signInWithGoogle, logout, isFirebaseEnabled }}>
@@ -245,3 +267,5 @@ export const useAuth = (): AuthContextType => {
   }
   return context;
 };
+
+    
