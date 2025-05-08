@@ -69,7 +69,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const data = userDocSnap.data();
       return {
         ...data,
-        createdAt: (data.createdAt as Timestamp)?.toDate() || new Date(),
+        createdAt: (data.createdAt as Timestamp)?.toDate ? (data.createdAt as Timestamp).toDate() : new Date(data.createdAt || Date.now()),
       } as AppUser;
     }
     return null;
@@ -83,12 +83,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       displayName: firebaseUser.displayName,
       photoURL: firebaseUser.photoURL,
       role,
-      company: '',
+      company: '', // Default company to empty string
       createdAt: serverTimestamp(),
     };
     const userDocRef = doc(firestoreDB, "users", firebaseUser.uid);
-    await setDoc(userDocRef, newUserProfile);
-    console.log(`[${new Date().toISOString()}] AuthContext createUserProfile: Profile created in Firestore for UID: ${firebaseUser.uid}`);
+    await setDoc(userDocRef, newUserProfile, { merge: true }); // Use merge:true to avoid overwriting if called multiple times (e.g. Google Sign In)
+    console.log(`[${new Date().toISOString()}] AuthContext createUserProfile: Profile created/merged in Firestore for UID: ${firebaseUser.uid}`);
     return { ...newUserProfile, createdAt: new Date() } as AppUser; // Return with JS Date
   };
 
@@ -121,7 +121,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         let profile = await getUserProfile(currentFirebaseUser.uid);
         if (!profile) {
           console.log(`[${timestamp}] AuthContext onAuthStateChanged: No Firestore profile found for ${currentFirebaseUser.uid}, creating default.`);
-          profile = await createUserProfile(currentFirebaseUser); // Create default profile if none exists
+          // Ensure display name and photoURL from Firebase Auth are used if available during initial profile creation
+          const updatedFirebaseUser = {
+            ...currentFirebaseUser,
+            displayName: currentFirebaseUser.displayName || currentFirebaseUser.email?.split('@')[0] || 'Usuario',
+            photoURL: currentFirebaseUser.photoURL || null,
+          };
+          profile = await createUserProfile(updatedFirebaseUser); 
         }
         setAppUser(profile);
         console.log(`[${timestamp}] AuthContext onAuthStateChanged: AppUser set:`, profile);
@@ -180,7 +186,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       console.log(`[${timestamp}] AuthContext register: Attempting registration for email:`, data.email);
       const userCredential = await createUserWithEmailAndPassword(authInstance, data.email, data.password);
       console.log(`[${timestamp}] AuthContext register: Firebase Auth user CREATED for:`, userCredential.user.email);
-      await createUserProfile(userCredential.user, 'user'); // Create Firestore profile with default 'user' role
+      // Create Firestore profile AFTER auth user is created. onAuthStateChanged will also pick this up, 
+      // but doing it here ensures profile exists before first redirect if any.
+      // Default role is 'user'.
+      await createUserProfile(userCredential.user, 'user'); 
+      console.log(`[${timestamp}] AuthContext register: Firestore profile CREATED for:`, userCredential.user.email);
       // onAuthStateChanged handles setUser, setAppUser (from newly created profile), and setupSession.
       return userCredential.user;
     } catch (error) {
@@ -199,8 +209,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     console.log(`[${timestamp}] AuthContext signInWithGoogle: Attempting Google sign-in with POPUP.`);
     try {
       const result = await signInWithPopup(authInstance, provider);
-      console.log(`[${new Date().toISOString()}] AuthContext signInWithGoogle (POPUP): signInWithPopup promise RESOLVED successfully for ${result.user.email}. Waiting for onAuthStateChanged.`);
-      // onAuthStateChanged will handle fetching/creating Firestore profile.
+      console.log(`[${new Date().toISOString()}] AuthContext signInWithGoogle (POPUP): signInWithPopup promise RESOLVED successfully for ${result.user.email}.`);
+      // Check if Firestore profile exists, create if not. This is important for Google Sign-In where user might be new to Firestore.
+      let profile = await getUserProfile(result.user.uid);
+      if (!profile) {
+        console.log(`[${new Date().toISOString()}] AuthContext signInWithGoogle: No Firestore profile after Google Sign-In for ${result.user.uid}, creating.`);
+        profile = await createUserProfile(result.user); // Creates with default 'user' role
+        setAppUser(profile); // Explicitly set appUser here as onAuthStateChanged might be slightly delayed or already fired.
+      } else {
+        setAppUser(profile); // Update appUser with existing profile
+      }
+      // onAuthStateChanged will also fire and handle setUser, and potentially re-fetch/confirm appUser and session.
     } catch (error) {
       const authError = error as AuthError;
       const errorTimestamp = new Date().toISOString();
@@ -235,7 +254,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch (error) {
       const errorTimestamp = new Date().toISOString();
       console.error(`[${errorTimestamp}] AuthContext logout: Error during Firebase signOut:`, error);
-      await setupSession(null); // Ensure cleanup even on error
+      await setupSession(null); 
       setUser(null);
       setAppUser(null);
       setInitialAuthCheckLoading(false);

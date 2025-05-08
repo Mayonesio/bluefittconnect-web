@@ -8,6 +8,6 @@ export interface AppUser {
   displayName: string | null;
   role: UserRole;
   company?: string;
-  createdAt: Date;
+  createdAt: Date; // Ensure this is consistently a Date object
   photoURL?: string | null;
 }
