@@ -1,6 +1,7 @@
 // src/lib/firebase/config.ts
 import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
 import { getAuth, type Auth } from "firebase/auth";
+import { getFirestore, type Firestore } from "firebase/firestore";
 
 const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
 const authDomain = process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN;
@@ -11,13 +12,14 @@ const appId = process.env.NEXT_PUBLIC_FIREBASE_APP_ID;
 
 let app: FirebaseApp | null = null;
 let authModule: Auth | null = null;
+let firestoreDB: Firestore | null = null;
 
 const essentialEnvVarsPresent = apiKey && authDomain && projectId;
 
 if (!essentialEnvVarsPresent) {
   console.error(
     "CRITICAL Firebase Config Error: Essential environment variables (NEXT_PUBLIC_FIREBASE_API_KEY, NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN, NEXT_PUBLIC_FIREBASE_PROJECT_ID) are missing or incomplete. " +
-    "Firebase features, including authentication, will be disabled. " +
+    "Firebase features, including authentication and Firestore, will be disabled. " +
     "Please ensure these are correctly set in your .env.local file or deployment environment."
   );
 } else {
@@ -49,8 +51,14 @@ if (!essentialEnvVarsPresent) {
       // This can catch errors like 'auth/invalid-api-key' if they occur at getAuth()
       // authModule remains null
     }
+    try {
+      firestoreDB = getFirestore(app);
+    } catch (e) {
+      console.error("Failed to initialize Firebase Firestore:", e);
+      // firestoreDB remains null
+    }
   }
 }
 
 // Export authModule as auth. It will be null if initialization failed.
-export { app, authModule as auth };
+export { app, authModule as auth, firestoreDB as db };
