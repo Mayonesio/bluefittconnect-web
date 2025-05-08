@@ -1,0 +1,45 @@
+# apphosting.yaml
+
+# Este archivo configura cómo Firebase App Hosting
+# construye y ejecuta tu aplicación.
+
+# Sección para definir variables de entorno que se inyectarán en el runtime de la app.
+# Estas variables son las que tu código de Next.js espera leer
+# usando process.env.NEXT_PUBLIC_... para inicializar el SDK de Firebase.
+env:
+  - variable: NEXT_PUBLIC_FIREBASE_API_KEY
+    value: "AIzaSyDCXy1J6Ey2dpVeWjSXHzLB82rwjb0Y9v8" # <-- Valor de tu apiKey de bluefittconnect
+
+  - variable: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+    value: "bluefittconnect.firebaseapp.com" # <-- Valor de tu authDomain de bluefittconnect
+
+  - variable: NEXT_PUBLIC_FIREBASE_PROJECT_ID
+    value: "bluefittconnect" # <-- Valor de tu projectId de bluefittconnect
+
+  - variable: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+    value: "bluefittconnect.firebasestorage.app" # <-- Valor de tu storageBucket de bluefittconnect
+
+  - variable: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+    value: "165765085004" # <-- Valor de tu messagingSenderId de bluefittconnect
+
+  - variable: NEXT_PUBLIC_FIREBASE_APP_ID
+    value: "1:165765085004:web:22520fc00552c7d5bc81e9" # <-- Valor de tu appId de bluefittconnect
+
+  # Si usas Google Analytics para tu app web, deberías añadir esta variable también.
+  # Si no la tienes configurada o no la usas en el código, puedes dejarla comentada o quitarla.
+  # - variable: NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID
+  #   value: "TU_MEASUREMENT_ID_REAL_DE_BLUEFITTCONNECT" # <-- Si existe, pega aquí tu valor real
+
+# Opcional: Puedes añadir configuraciones de runtime si necesitas ajustar CPU, memoria, instancias, etc.
+# Estas configuraciones son opcionales y pueden dejarse comentadas por ahora.
+# runConfig:
+#   cpu: 1
+#   memory: "512Mi"
+#   minInstances: 0
+#   maxInstances: 10
+#   timeoutSeconds: 300
+#   concurrency: 80
+
+# Opcional: Puedes añadir configuraciones de build si necesitas ajustar el comando de build, etc.
+# buildConfig:
+#   buildTarget: "production" # Ejemplo: usar el comando 'production' en package.json scripts
