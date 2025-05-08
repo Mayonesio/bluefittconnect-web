@@ -39,55 +39,61 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (firebaseUser) {
       try {
         const token = await firebaseUser.getIdToken(true); // Force refresh token
-        // Set cookie. In a real app, consider HttpOnly if managing via backend.
-        // Secure flag should be used if served over HTTPS.
         document.cookie = `firebaseAuthToken=${token}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`; // 7 days
+        console.log("AuthContext setupSession: Token cookie set for user:", firebaseUser.email);
       } catch (error) {
-        console.error("Error setting auth token cookie:", error);
-        // Clear cookie if token cannot be obtained
+        console.error("AuthContext setupSession: Error setting auth token cookie:", error);
         document.cookie = "firebaseAuthToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax";
       }
     } else {
-      // Clear cookie on logout or if user is null
       document.cookie = "firebaseAuthToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax";
+      console.log("AuthContext setupSession: Token cookie cleared.");
     }
   };
 
   useEffect(() => {
+    console.log("AuthContext useEffect: Initializing auth state listener. Firebase enabled:", isFirebaseEnabled);
     if (!isFirebaseEnabled) { 
       setLoading(false);
       setUser(null);
-      setupSession(null); // Ensure cookie is cleared
+      setupSession(null); 
       console.warn(
-          "Firebase Auth module is not initialized, likely due to missing or invalid Firebase configuration. Authentication features will be disabled."
+          "AuthContext: Firebase Auth module is not initialized. Authentication features disabled."
       );
       return;
     }
 
     const authInstance = firebaseAuthModule as FirebaseAuthType; 
     const unsubscribe = onAuthStateChanged(authInstance, async (currentFirebaseUser) => {
-      setUser(currentFirebaseUser); // Update user state first
-      await setupSession(currentFirebaseUser); // Then setup session (cookie)
+      console.log("AuthContext onAuthStateChanged: User state changed. Current user:", currentFirebaseUser?.email || null);
+      setUser(currentFirebaseUser); 
+      await setupSession(currentFirebaseUser); 
       setLoading(false);
+      console.log("AuthContext onAuthStateChanged: User and loading state updated. Loading:", false, "User:", currentFirebaseUser?.email || null);
     });
-    return () => unsubscribe();
+    return () => {
+      console.log("AuthContext useEffect: Cleaning up auth state listener.");
+      unsubscribe();
+    }
   }, [isFirebaseEnabled]); 
 
   const login = async (data: LoginFormValues): Promise<FirebaseUser | null> => {
     if (!isFirebaseEnabled || !firebaseAuthModule) {
+      console.error("AuthContext login: Firebase not configured.");
       throw new Error("Firebase no está configurado correctamente. No se puede iniciar sesión.");
     }
     const authInstance = firebaseAuthModule as FirebaseAuthType;
     try {
+      console.log("AuthContext login: Attempting sign-in for email:", data.email);
       const userCredential = await signInWithEmailAndPassword(authInstance, data.email, data.password);
       if (userCredential.user) {
-        await setupSession(userCredential.user); // Ensure cookie is set before resolving
+        console.log("AuthContext login: Sign-in successful for:", userCredential.user.email);
+        await setupSession(userCredential.user); 
       }
-      // onAuthStateChanged will also set user state in context
       return userCredential.user;
     } catch (error) {
-      console.error("Error al iniciar sesión:", error);
-      await setupSession(null); // Clear session on error
+      console.error("AuthContext login: Error during sign-in:", error);
+      await setupSession(null); 
       const authError = error as AuthError;
       throw authError; 
     }
@@ -95,19 +101,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const register = async (data: RegisterFormValues): Promise<FirebaseUser | null> => {
     if (!isFirebaseEnabled || !firebaseAuthModule) {
+      console.error("AuthContext register: Firebase not configured.");
       throw new Error("Firebase no está configurado correctamente. No se puede registrar.");
     }
     const authInstance = firebaseAuthModule as FirebaseAuthType;
     try {
+      console.log("AuthContext register: Attempting registration for email:", data.email);
       const userCredential = await createUserWithEmailAndPassword(authInstance, data.email, data.password);
       if (userCredential.user) {
-        await setupSession(userCredential.user); // Ensure cookie is set before resolving
+        console.log("AuthContext register: Registration successful for:", userCredential.user.email);
+        await setupSession(userCredential.user);
       }
-      // onAuthStateChanged will also set user state in context
       return userCredential.user;
     } catch (error) {
-      console.error("Error al registrar:", error);
-      await setupSession(null); // Clear session on error
+      console.error("AuthContext register: Error during registration:", error);
+      await setupSession(null); 
       const authError = error as AuthError;
       throw authError;
     }
@@ -115,43 +123,45 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signInWithGoogle = async (): Promise<FirebaseUser | null> => {
     if (!isFirebaseEnabled || !firebaseAuthModule) {
+      console.error("AuthContext signInWithGoogle: Firebase not configured.");
       throw new Error("Firebase no está configurado correctamente. No se puede iniciar sesión con Google.");
     }
     const authInstance = firebaseAuthModule as FirebaseAuthType;
     const provider = new GoogleAuthProvider();
     try {
+      console.log("AuthContext signInWithGoogle: Attempting Google sign-in popup.");
       const result = await signInWithPopup(authInstance, provider);
       if (result.user) {
-        await setupSession(result.user); // Ensure cookie is set before resolving
+        console.log("AuthContext signInWithGoogle: Google sign-in successful for:", result.user.email);
+        await setupSession(result.user); 
       }
-      // onAuthStateChanged will also set user state in context
       return result.user;
     } catch (error) {
-      console.error("Error al iniciar sesión con Google:", error);
-      await setupSession(null); // Clear session on error
+      console.error("AuthContext signInWithGoogle: Error during Google sign-in:", error);
+      await setupSession(null); 
       const authError = error as AuthError;
       throw authError;
     }
   };
 
   const logout = async () => {
+    console.log("AuthContext logout: Attempting logout.");
     if (!isFirebaseEnabled || !firebaseAuthModule) {
       setUser(null);
       setLoading(false); 
-      await setupSession(null); // Ensure cookie is cleared
+      await setupSession(null);
       router.push("/auth/login");
-      console.warn("Firebase no está configurado. Sesión cerrada localmente.");
+      console.warn("AuthContext logout: Firebase not configured. Session closed locally.");
       return;
     }
     const authInstance = firebaseAuthModule as FirebaseAuthType;
     try {
       await signOut(authInstance);
-      // onAuthStateChanged will handle setUser(null) and clearing the cookie via setupSession(null)
+      console.log("AuthContext logout: Firebase signOut successful. onAuthStateChanged will handle state updates.");
+      // onAuthStateChanged will handle setUser(null), setLoading(false), and clearing the cookie via setupSession(null)
       router.push("/auth/login"); 
     } catch (error) {
-      console.error("Error al cerrar sesión:", error);
-      // It's good practice to ensure session is cleared even if signOut fails for some reason,
-      // though onAuthStateChanged should ideally handle this.
+      console.error("AuthContext logout: Error during Firebase signOut:", error);
       await setupSession(null);
       const authError = error as AuthError;
       throw authError;

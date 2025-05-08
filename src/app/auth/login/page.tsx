@@ -42,11 +42,15 @@ export default function LoginPage() {
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  // This useEffect handles redirecting if already logged in when page loads
+  // This useEffect handles redirecting if already logged in OR after a successful login
+  // when user and authLoading states are updated by AuthContext.
   useEffect(() => {
     if (!authLoading && user) {
       const redirectUrl = searchParams.get("redirect") || "/";
+      console.log(`LoginPage useEffect: User authenticated (user: ${user.email}, authLoading: ${authLoading}). Redirecting to: ${redirectUrl}`);
       router.push(redirectUrl);
+    } else {
+      console.log(`LoginPage useEffect: Conditions not met for redirect (user: ${!!user}, authLoading: ${authLoading})`);
     }
   }, [user, authLoading, router, searchParams]);
 
@@ -80,17 +84,18 @@ export default function LoginPage() {
       return;
     }
     setIsLoading(true);
+    console.log("LoginPage onSubmit: Attempting login...");
     try {
       const firebaseUser = await login(data);
       if (firebaseUser) {
+        console.log("LoginPage onSubmit: Login successful for user:", firebaseUser.email);
         toast({
           title: "¡Bienvenido de Nuevo!",
           description: "Has iniciado sesión correctamente.",
         });
-        const redirectUrl = searchParams.get("redirect") || "/";
-        router.push(redirectUrl); // Explicit redirect
+        // Redirection will be handled by the useEffect hook watching user and authLoading state
       } else {
-        // Fallback, though login should throw on failure
+        console.log("LoginPage onSubmit: Login returned no user, this shouldn't happen if successful.");
          toast({
           title: "Error de Inicio de Sesión",
           description: "No se pudo iniciar sesión. Verifica tus credenciales.",
@@ -99,6 +104,7 @@ export default function LoginPage() {
       }
     } catch (error) {
       const authError = error as AuthError;
+      console.error("LoginPage onSubmit: Login error:", authError);
       let errorMessage = "Error al iniciar sesión. Por favor, verifica tus credenciales.";
       if (authError.code === "auth/user-not-found" || authError.code === "auth/wrong-password" || authError.code === "auth/invalid-credential") {
         errorMessage = "Correo electrónico o contraseña incorrectos.";
@@ -127,17 +133,18 @@ export default function LoginPage() {
       return;
     }
     setIsGoogleLoading(true);
+    console.log("LoginPage handleGoogleSignIn: Attempting Google sign-in...");
     try {
       const firebaseUser = await signInWithGoogle();
       if (firebaseUser) {
+        console.log("LoginPage handleGoogleSignIn: Google sign-in successful for user:", firebaseUser.email);
         toast({
           title: "¡Bienvenido!",
           description: "Has iniciado sesión correctamente con Google.",
         });
-        const redirectUrl = searchParams.get("redirect") || "/";
-        router.push(redirectUrl); // Explicit redirect
+        // Redirection will be handled by the useEffect hook watching user and authLoading state
       } else {
-        // Fallback
+        console.log("LoginPage handleGoogleSignIn: Google sign-in returned no user.");
         toast({
           title: "Error de Inicio de Sesión con Google",
           description: "No se pudo iniciar sesión con Google. Inténtalo de nuevo.",
@@ -146,6 +153,7 @@ export default function LoginPage() {
       }
     } catch (error) {
       const authError = error as AuthError;
+      console.error("LoginPage handleGoogleSignIn: Google sign-in error:", authError);
       let errorMessage = "Error al iniciar sesión con Google. Inténtalo de nuevo.";
       if (authError.code === 'auth/popup-closed-by-user') {
         errorMessage = 'Proceso de inicio de sesión con Google cancelado.';
@@ -163,6 +171,7 @@ export default function LoginPage() {
   };
   
   if (authLoading && !user) { 
+    console.log("LoginPage: Auth loading, no user. Displaying loading spinner.");
     return (
       <div className="flex flex-col items-center justify-center h-screen">
         <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-primary"></div>
@@ -174,6 +183,7 @@ export default function LoginPage() {
   }
 
   if (!user && !isFirebaseEnabled && !authLoading) { 
+     console.log("LoginPage: Firebase not enabled, no user, not auth loading. Displaying config error.");
      return (
       <Card className="w-full max-w-md shadow-xl">
         <CardHeader className="text-center">
@@ -193,7 +203,7 @@ export default function LoginPage() {
      );
   }
 
-
+  console.log(`LoginPage render: user: ${!!user}, authLoading: ${authLoading}, isFirebaseEnabled: ${isFirebaseEnabled}`);
   return (
     <Card className="w-full max-w-md shadow-xl">
       <CardHeader className="text-center">
