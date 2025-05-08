@@ -46,17 +46,22 @@ export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  // This useEffect handles redirecting if already logged in OR after a successful registration
-  // when user and authLoading states are updated by AuthContext.
   useEffect(() => {
-    if (!authLoading && user) {
-      const redirectUrl = searchParams.get("redirect") || "/";
-      console.log(`RegisterPage useEffect: User authenticated (user: ${user.email}, authLoading: ${authLoading}). Redirecting to: ${redirectUrl}`);
-      router.push(redirectUrl);
-    } else {
-      console.log(`RegisterPage useEffect: Conditions not met for redirect (user: ${!!user}, authLoading: ${authLoading})`);
+     // If auth is still loading, or if Firebase isn't enabled, don't try to redirect yet.
+    if (authLoading || !isFirebaseEnabled) {
+      console.log(`RegisterPage useEffect: Conditions not met for redirect (authLoading: ${authLoading}, isFirebaseEnabled: ${isFirebaseEnabled}, user: ${!!user})`);
+      return;
     }
-  }, [user, authLoading, router, searchParams]);
+    
+    // If auth has finished loading and Firebase is enabled:
+    if (user) { // If user is authenticated
+      const redirectUrl = searchParams.get("redirect") || "/";
+      console.log(`RegisterPage useEffect: User authenticated. Redirecting to: ${redirectUrl}`);
+      router.push(redirectUrl);
+    } else { // If user is not authenticated (and auth not loading, firebase enabled)
+      console.log(`RegisterPage useEffect: User not authenticated. No redirect.`);
+    }
+  }, [user, authLoading, router, searchParams, isFirebaseEnabled]);
 
   useEffect(() => {
     if (!authLoading && !isFirebaseEnabled && !user) {
@@ -163,7 +168,7 @@ export default function RegisterPage() {
       console.error("RegisterPage handleGoogleSignUp: Google sign-up error:", authError);
       let errorMessage = "Error al registrar con Google. Inténtalo de nuevo.";
        if (authError.code === 'auth/popup-closed-by-user') {
-        errorMessage = 'Proceso de registro con Google cancelado.';
+        errorMessage = 'Has cerrado la ventana de inicio de sesión de Google. Proceso cancelado.';
       } else if (authError.code === 'auth/account-exists-with-different-credential') {
         errorMessage = 'Ya existe una cuenta con este correo electrónico usando un método de inicio de sesión diferente. Intenta iniciar sesión.';
       }

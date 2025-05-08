@@ -42,17 +42,23 @@ export default function LoginPage() {
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  // This useEffect handles redirecting if already logged in OR after a successful login
-  // when user and authLoading states are updated by AuthContext.
   useEffect(() => {
-    if (!authLoading && user) {
-      const redirectUrl = searchParams.get("redirect") || "/";
-      console.log(`LoginPage useEffect: User authenticated (user: ${user.email}, authLoading: ${authLoading}). Redirecting to: ${redirectUrl}`);
-      router.push(redirectUrl);
-    } else {
-      console.log(`LoginPage useEffect: Conditions not met for redirect (user: ${!!user}, authLoading: ${authLoading})`);
+    // If auth is still loading, or if Firebase isn't enabled, don't try to redirect yet.
+    if (authLoading || !isFirebaseEnabled) {
+      console.log(`LoginPage useEffect: Conditions not met for redirect (authLoading: ${authLoading}, isFirebaseEnabled: ${isFirebaseEnabled}, user: ${!!user})`);
+      return;
     }
-  }, [user, authLoading, router, searchParams]);
+
+    // If auth has finished loading and Firebase is enabled:
+    if (user) { // If user is authenticated
+      const redirectUrl = searchParams.get("redirect") || "/";
+      console.log(`LoginPage useEffect: User authenticated. Redirecting to: ${redirectUrl}`);
+      router.push(redirectUrl);
+    } else { // If user is not authenticated (and auth not loading, firebase enabled)
+      console.log(`LoginPage useEffect: User not authenticated. No redirect.`);
+    }
+  }, [user, authLoading, router, searchParams, isFirebaseEnabled]);
+
 
   useEffect(() => {
     if (!authLoading && !isFirebaseEnabled && !user) {
@@ -144,7 +150,9 @@ export default function LoginPage() {
         });
         // Redirection will be handled by the useEffect hook watching user and authLoading state
       } else {
-        console.log("LoginPage handleGoogleSignIn: Google sign-in returned no user.");
+        // This case (firebaseUser is null but no error thrown from signInWithGoogle) should be rare
+        // if signInWithGoogle always throws on failure or returns a user.
+        console.log("LoginPage handleGoogleSignIn: Google sign-in returned no user but also no error from AuthContext.signInWithGoogle.");
         toast({
           title: "Error de Inicio de Sesión con Google",
           description: "No se pudo iniciar sesión con Google. Inténtalo de nuevo.",
@@ -156,7 +164,7 @@ export default function LoginPage() {
       console.error("LoginPage handleGoogleSignIn: Google sign-in error:", authError);
       let errorMessage = "Error al iniciar sesión con Google. Inténtalo de nuevo.";
       if (authError.code === 'auth/popup-closed-by-user') {
-        errorMessage = 'Proceso de inicio de sesión con Google cancelado.';
+        errorMessage = 'Has cerrado la ventana de inicio de sesión de Google. Proceso cancelado.';
       } else if (authError.code === 'auth/account-exists-with-different-credential') {
         errorMessage = 'Ya existe una cuenta con este correo electrónico usando un método de inicio de sesión diferente.';
       }
