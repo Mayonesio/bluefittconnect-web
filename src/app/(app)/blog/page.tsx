@@ -24,7 +24,7 @@ interface ArticuloBlog {
 
 const sampleArticulosBlog: ArticuloBlog[] = [
   { id: '1', titulo: 'Optimización del Riego por Goteo en Cultivos Extensivos', slug: 'riego-goteo-cultivos', extracto: 'Descubra técnicas avanzadas para maximizar la eficiencia del riego por goteo y mejorar la producción...', imageUrl: 'https://picsum.photos/seed/riego-goteo/400/250', fechaPublicacion: '2024-07-28', categoria: 'Consejos de Riego', autor: 'Ing. Agrónomo', aiHint: 'irrigation drip', icono: Droplets },
-  { id: '2', titulo: 'Nuevas Válvulas Inteligentes para el Control Remoto de Sistemas', slug: 'valvulas-inteligentes', extracto: 'Conozca las últimas innovaciones en válvulas con conectividad para una gestión agrícola más eficiente.', imageUrl: 'https://picsum.photos/seed/smart-valve/400/250', fechaPublicacion: '2024-07-25', categoria: 'Novedades', autor: 'Equipo Blufitt', aiHint: 'valve technology', icono: Cpu },
+  { id: '2', titulo: 'Nuevas Válvulas Inteligentes para el Control Remoto de Sistemas', slug: 'valvulas-inteligentes', extracto: 'Conozca las últimas innovaciones en válvulas con conectividad para una gestión agrícola más eficiente.', imageUrl: 'https://picsum.photos/seed/smart-valve/400/250', fechaPublicacion: '2024-07-25', categoria: 'Novedades', autor: 'Equipo Bluefitt', aiHint: 'valve technology', icono: Cpu },
   { id: '3', titulo: 'La Importancia de los Caudalímetros en la Agricultura de Precisión', slug: 'caudalimetros-precision', extracto: 'Entienda cómo los caudalímetros son clave para una agricultura sostenible y rentable.', imageUrl: 'https://picsum.photos/seed/flowmeter-agriculture/400/250', fechaPublicacion: '2024-07-22', categoria: 'Tecnología Agrícola', autor: 'Dr. Riego Eficiente', aiHint: 'meter field', icono: Lightbulb },
   { id: '4', titulo: 'Caso de Éxito: Aumento de Rendimiento con Racores Antifugas', slug: 'racores-antifugas-exito', extracto: 'Un estudio de caso real que demuestra cómo la elección correcta de racores impacta positivamente.', imageUrl: 'https://picsum.photos/seed/fitting-success/400/250', fechaPublicacion: '2024-07-18', categoria: 'Casos de Éxito', autor: 'AgroTestimonios', aiHint: 'pipe connection', icono: Award },
 ];
@@ -36,7 +36,7 @@ export default function BlogPage() {
     <div className="flex flex-col gap-8">
       <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">Blog de Blufitt Connect</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">Blog de Bluefitt Connect</h1>
           <p className="text-muted-foreground">
             Artículos, novedades y consejos sobre riego agrícola y tecnología.
           </p>

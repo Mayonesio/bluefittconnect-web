@@ -28,7 +28,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from '@/contexts/auth-context';
 import { useToast } from "@/hooks/use-toast";
-import Breadcrumb from '@/components/layout/breadcrumb'; // Import Breadcrumb
+import Breadcrumb from '@/components/layout/breadcrumb'; 
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -55,10 +55,17 @@ export default function AppLayout({ children }: AppLayoutProps) {
   };
 
   const getUserInitials = () => {
+    if (user?.displayName) {
+      const parts = user.displayName.split(' ');
+      if (parts.length > 1) {
+        return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+      }
+      return user.displayName.substring(0, 2).toUpperCase();
+    }
     if (user?.email) {
       return user.email.substring(0, 2).toUpperCase();
     }
-    return "BC"; // Blufitt Connect
+    return "BC"; // Bluefitt Connect
   };
 
 
@@ -69,7 +76,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
           <SidebarHeader className="p-4 flex items-center justify-center group-data-[state=expanded]:justify-between border-b border-sidebar-border">
             <Link href="/" className="flex items-center gap-2 group-data-[state=collapsed]:hidden">
               <Logo className="h-8 w-auto text-sidebar-primary" />
-              <span className="font-semibold text-lg">Blufitt Connect</span>
+              <span className="font-semibold text-lg">Bluefitt Connect</span>
             </Link>
              <Link href="/" className="hidden items-center gap-2 group-data-[state=collapsed]:flex">
               <Logo className="h-8 w-8 text-sidebar-primary" />
@@ -99,7 +106,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
               <SidebarTrigger />
             </div>
             <div className="flex-1">
-              <Breadcrumb /> {/* Add Breadcrumb component here */}
+              <Breadcrumb /> 
             </div>
             {loading ? (
               <div className="h-9 w-9 rounded-full bg-muted animate-pulse" />

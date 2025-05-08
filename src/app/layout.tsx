@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Blufitt Connect',
+  title: 'Bluefitt Connect',
   description: 'Plataforma de productos de riego agrícola: válvulas, racores y caudalímetros.',
   icons: {
     icon: '/favicon.ico', 

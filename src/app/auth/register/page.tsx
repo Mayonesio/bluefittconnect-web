@@ -1,5 +1,5 @@
 // src/app/auth/register/page.tsx
-"use client"; // Ensure the page itself is a client component
+"use client"; 
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -103,7 +103,7 @@ function RegisterContent() {
       await register(data);
       toast({
         title: "¡Registro Exitoso!",
-        description: "Tu cuenta ha sido creada. Bienvenido a Blufitt Connect.",
+        description: "Tu cuenta ha sido creada. Bienvenido a Bluefitt Connect.",
       });
       console.log(`[${timestamp}] RegisterPage onSubmit: Email/password registration call successful for ${data.email}. Redirection useEffect will handle next steps upon user state update.`);
     } catch (error) {
@@ -213,7 +213,7 @@ function RegisterContent() {
     <Card className="w-full max-w-md shadow-xl">
       <CardHeader className="text-center">
         <CardTitle className="text-2xl">Crear Cuenta</CardTitle>
-        <CardDescription>Regístrate para acceder a Blufitt Connect.</CardDescription>
+        <CardDescription>Regístrate para acceder a Bluefitt Connect.</CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
@@ -340,7 +340,7 @@ function RegisterContent() {
   );
 }
 
-export default function RegisterPageWrapper() { // Renamed original export
+export default function RegisterPageWrapper() { 
   return (
     <Suspense fallback={
       <div className="flex flex-col items-center justify-center h-screen">

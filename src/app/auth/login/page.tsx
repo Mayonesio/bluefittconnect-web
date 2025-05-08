@@ -1,5 +1,5 @@
 // src/app/auth/login/page.tsx
-"use client"; // Ensure the page itself is a client component
+"use client"; 
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -205,7 +205,7 @@ function LoginContent() {
     <Card className="w-full max-w-md shadow-xl">
       <CardHeader className="text-center">
         <CardTitle className="text-2xl">Iniciar Sesión</CardTitle>
-        <CardDescription>Accede a tu cuenta de Blufitt Connect.</CardDescription>
+        <CardDescription>Accede a tu cuenta de Bluefitt Connect.</CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
@@ -301,7 +301,7 @@ function LoginContent() {
   );
 }
 
-export default function LoginPageWrapper() { // Renamed original export
+export default function LoginPageWrapper() { 
   return (
     <Suspense fallback={
       <div className="flex flex-col items-center justify-center h-screen">
