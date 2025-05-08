@@ -29,6 +29,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from '@/contexts/auth-context';
 import { useToast } from "@/hooks/use-toast";
 import Breadcrumb from '@/components/layout/breadcrumb'; 
+import { ThemeToggle } from '@/components/layout/theme-toggle';
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -108,56 +109,59 @@ export default function AppLayout({ children }: AppLayoutProps) {
             <div className="flex-1">
               <Breadcrumb /> 
             </div>
-            {loading ? (
-              <div className="h-9 w-9 rounded-full bg-muted animate-pulse" />
-            ) : user ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="rounded-full">
-                    <Avatar className="h-9 w-9">
-                      <AvatarImage src={user.photoURL || `https://picsum.photos/seed/${user.uid}/50/50`} alt="Avatar de Usuario" data-ai-hint="user avatar" />
-                      <AvatarFallback>{getUserInitials()}</AvatarFallback>
-                    </Avatar>
+            <div className="flex items-center gap-4">
+              <ThemeToggle />
+              {loading ? (
+                <div className="h-9 w-9 rounded-full bg-muted animate-pulse" />
+              ) : user ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="rounded-full">
+                      <Avatar className="h-9 w-9">
+                        <AvatarImage src={user.photoURL || `https://picsum.photos/seed/${user.uid}/50/50`} alt="Avatar de Usuario" data-ai-hint="user avatar" />
+                        <AvatarFallback>{getUserInitials()}</AvatarFallback>
+                      </Avatar>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuLabel>{user.email || "Mi Cuenta"}</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link href="/settings?tab=profile">
+                        <UserCircle className="mr-2 h-4 w-4" />
+                        <span>Perfil</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/settings">
+                        <Settings className="mr-2 h-4 w-4" />
+                        <span>Configuración</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleLogout}>
+                      <LogOut className="mr-2 h-4 w-4" />
+                      <span>Cerrar Sesión</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" asChild>
+                    <Link href="/auth/login">
+                      <LogIn className="mr-2 h-4 w-4" />
+                      Iniciar Sesión
+                    </Link>
                   </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  <DropdownMenuLabel>{user.email || "Mi Cuenta"}</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <Link href="/settings?tab=profile">
-                      <UserCircle className="mr-2 h-4 w-4" />
-                      <span>Perfil</span>
+                  <Button asChild>
+                    <Link href="/auth/register">
+                      <UserPlus className="mr-2 h-4 w-4" />
+                      Registrarse
                     </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/settings">
-                      <Settings className="mr-2 h-4 w-4" />
-                      <span>Configuración</span>
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleLogout}>
-                    <LogOut className="mr-2 h-4 w-4" />
-                    <span>Cerrar Sesión</span>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            ) : (
-              <div className="flex items-center gap-2">
-                <Button variant="outline" asChild>
-                  <Link href="/auth/login">
-                    <LogIn className="mr-2 h-4 w-4" />
-                    Iniciar Sesión
-                  </Link>
-                </Button>
-                <Button asChild>
-                  <Link href="/auth/register">
-                    <UserPlus className="mr-2 h-4 w-4" />
-                    Registrarse
-                  </Link>
-                </Button>
-              </div>
-            )}
+                  </Button>
+                </div>
+              )}
+            </div>
           </header>
           <SidebarInset className="flex-1 overflow-y-auto p-4 md:p-6">
             {children}
