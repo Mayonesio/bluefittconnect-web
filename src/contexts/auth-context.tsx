@@ -10,7 +10,9 @@ import {
   signOut, 
   onAuthStateChanged,
   GoogleAuthProvider,
-  signInWithPopup,    
+  // signInWithPopup, // No longer used
+  signInWithRedirect,
+  getRedirectResult,    
   type Auth as FirebaseAuthType 
 } from "firebase/auth";
 import { useRouter } from "next/navigation";
@@ -19,11 +21,11 @@ import type { RegisterFormValues } from "@/app/auth/register/page";
 
 interface AuthContextType {
   user: FirebaseUser | null;
-  loading: boolean;
+  loading: boolean; // Combined loading state (initial auth check + redirect processing)
   isFirebaseEnabled: boolean; 
   login: (data: LoginFormValues) => Promise<FirebaseUser | null>;
   register: (data: RegisterFormValues) => Promise<FirebaseUser | null>;
-  signInWithGoogle: () => Promise<FirebaseUser | null>;
+  signInWithGoogle: () => Promise<void>; // Changed return type
   logout: () => Promise<void>;
 }
 
@@ -31,39 +33,39 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<FirebaseUser | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [initialAuthCheckLoading, setInitialAuthCheckLoading] = useState(true);
+  const [isProcessingRedirect, setIsProcessingRedirect] = useState(true);
   const isFirebaseEnabled = !!firebaseAuthModule; 
   const router = useRouter();
 
-  // Returns true if session setup was successful (cookie set or cleared appropriately),
-  // false if token could not be obtained for an existing user.
+  const combinedLoading = initialAuthCheckLoading || isProcessingRedirect;
+
   const setupSession = async (firebaseUser: FirebaseUser | null): Promise<boolean> => {
     if (firebaseUser) {
       try {
-        const token = await firebaseUser.getIdToken(true); // Force refresh token
-        document.cookie = `firebaseAuthToken=${token}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`; // 7 days
+        const token = await firebaseUser.getIdToken(true); 
+        document.cookie = `firebaseAuthToken=${token}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`; 
         console.log("AuthContext setupSession: Token cookie set for user:", firebaseUser.email);
         return true;
       } catch (error) {
         console.error("AuthContext setupSession: Error setting auth token cookie:", error);
-        // Clear cookie if token fetching fails, to ensure middleware sees unauthenticated state
         document.cookie = "firebaseAuthToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax";
-        return false; // Indicate failure
+        return false; 
       }
     } else {
-      // Clearing cookie for a null user
       document.cookie = "firebaseAuthToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax";
       console.log("AuthContext setupSession: Token cookie cleared (user is null).");
-      return true; // Clearing cookie is a "successful" operation in this context
+      return true; 
     }
   };
 
   useEffect(() => {
     console.log("AuthContext useEffect: Initializing auth state listener. Firebase enabled:", isFirebaseEnabled);
-    if (!isFirebaseEnabled) { 
-      setLoading(false);
+    if (!isFirebaseEnabled || !firebaseAuthModule) { 
+      setInitialAuthCheckLoading(false);
+      setIsProcessingRedirect(false); // Ensure all loading states are false
       setUser(null);
-      setupSession(null); // Ensure cookie is cleared if Firebase isn't enabled
+      setupSession(null); 
       console.warn(
           "AuthContext: Firebase Auth module is not initialized. Authentication features disabled."
       );
@@ -71,44 +73,61 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
 
     const authInstance = firebaseAuthModule as FirebaseAuthType; 
-    const unsubscribe = onAuthStateChanged(authInstance, async (currentFirebaseUser) => {
+    
+    // Listener for general auth state changes (e.g., manual login, logout, token expiry)
+    const unsubscribeAuthState = onAuthStateChanged(authInstance, async (currentFirebaseUser) => {
       console.log("AuthContext onAuthStateChanged: User state changed. Current user:", currentFirebaseUser?.email || null);
-      
-      // Update user state and loading status first.
       setUser(currentFirebaseUser);
-      setLoading(false);
-
-      // Attempt to set up or clear the session cookie based on the Firebase user state.
-      const sessionSetupSuccess = await setupSession(currentFirebaseUser);
-
-      if (currentFirebaseUser && !sessionSetupSuccess) {
-        // If a Firebase user exists but we couldn't set up our session cookie (e.g., getIdToken failed),
-        // log a warning. This state might cause issues if middleware relies on the cookie.
-        // We are no longer calling signOut() here aggressively, as it might interrupt ongoing auth flows
-        // like signInWithPopup. The individual auth methods (login, register, signInWithGoogle)
-        // are responsible for handling signOut if their specific session setup fails.
-        console.warn(
-          "AuthContext onAuthStateChanged: Firebase user exists, but session cookie setup failed. User:",
-          currentFirebaseUser.email,
-          "This might lead to issues if the cookie is required by middleware or for subsequent operations."
-        );
-      }
-      
-      console.log("AuthContext onAuthStateChanged: User and loading state fully updated. Loading:", false, "User:", currentFirebaseUser?.email || null);
+      await setupSession(currentFirebaseUser);
+      setInitialAuthCheckLoading(false); // Initial check via onAuthStateChanged is done
+      console.log("AuthContext onAuthStateChanged: User and loading state updated. InitialAuthLoading:", false, "User:", currentFirebaseUser?.email || null);
     });
+
+    // Check for redirect result on initial load
+    const processRedirect = async () => {
+      console.log("AuthContext: Checking for redirect result...");
+      setIsProcessingRedirect(true);
+      try {
+        const result = await getRedirectResult(authInstance);
+        if (result && result.user) {
+          console.log("AuthContext getRedirectResult: Success. User:", result.user.email);
+          // Set user and session. onAuthStateChanged might also fire, but this ensures immediate update.
+          setUser(result.user); 
+          await setupSession(result.user);
+        } else {
+          console.log("AuthContext getRedirectResult: No pending redirect result or no user found.");
+        }
+      } catch (error) {
+        const authError = error as AuthError;
+        console.error("AuthContext getRedirectResult Error:", authError.code, authError.message);
+        // Handle specific errors like 'auth/account-exists-with-different-credential'
+        // Potentially show a toast to the user from here or let the page handle it
+        if (authError.code === 'auth/account-exists-with-different-credential') {
+           // TODO: Consider how to inform the user (e.g., toast from context or propogate error)
+           console.warn("AuthContext: An account already exists with the same email address but different sign-in credentials. Sign in using a provider associated with this email address.");
+        }
+        await setupSession(null); // Clear session on error
+        setUser(null);
+      } finally {
+        setIsProcessingRedirect(false); // Finished processing redirect
+        console.log("AuthContext getRedirectResult: Processing finished. IsProcessingRedirect:", false);
+      }
+    };
+    
+    processRedirect();
+
     return () => {
       console.log("AuthContext useEffect: Cleaning up auth state listener.");
-      unsubscribe();
+      unsubscribeAuthState();
     }
-  }, [isFirebaseEnabled]); // isFirebaseEnabled should not change, but good practice.
+  }, [isFirebaseEnabled]); 
 
-  const handleAuthOperationError = async (error: any, operationName: string) => {
+  const handleAuthOperationError = async (error: any, operationName: string): Promise<null> => {
     console.error(`AuthContext ${operationName}: Error:`, error);
-    // It's generally good to ensure the session is cleared if an auth operation fails,
-    // especially if it's an error that implies an invalid or incomplete auth state.
     await setupSession(null); 
     const authError = error as AuthError;
-    throw authError; // Re-throw for the UI to handle
+    // setUser(null) will be handled by onAuthStateChanged if signOut is called or error implies invalid user
+    throw authError; 
   };
 
   const login = async (data: LoginFormValues): Promise<FirebaseUser | null> => {
@@ -124,15 +143,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const sessionSetupSuccess = await setupSession(userCredential.user);
         if (!sessionSetupSuccess) {
           console.warn("AuthContext login: Session setup failed after login. Signing out.");
-          await signOut(authInstance); // Triggers onAuthStateChanged to nullify user & clear cookie via its setupSession(null)
+          await signOut(authInstance); 
           throw new Error("Error al configurar la sesión después del inicio de sesión. Inténtalo de nuevo.");
         }
         console.log("AuthContext login: Sign-in and session setup successful for:", userCredential.user.email);
       }
-      // onAuthStateChanged will handle setUser and setLoading.
       return userCredential.user; 
     } catch (error) {
-      // error will be AuthError from signInWithEmailAndPassword or the custom error from session setup failure
       return handleAuthOperationError(error, "login");
     }
   };
@@ -161,7 +178,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const signInWithGoogle = async (): Promise<FirebaseUser | null> => {
+  const signInWithGoogle = async (): Promise<void> => {
     if (!isFirebaseEnabled || !firebaseAuthModule) {
       console.error("AuthContext signInWithGoogle: Firebase not configured.");
       throw new Error("Firebase no está configurado correctamente. No se puede iniciar sesión con Google.");
@@ -170,30 +187,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const provider = new GoogleAuthProvider();
     console.log(`AuthContext signInWithGoogle: Using auth domain: ${authInstance.config.authDomain}`); 
     try {
-      console.log("AuthContext signInWithGoogle: Attempting Google sign-in popup.");
-      const result = await signInWithPopup(authInstance, provider);
-      if (result.user) {
-        const sessionSetupSuccess = await setupSession(result.user);
-        if (!sessionSetupSuccess) {
-          console.warn("AuthContext signInWithGoogle: Session setup failed after Google sign-in. Signing out.");
-          await signOut(authInstance);
-          throw new Error("Error al configurar la sesión después del inicio de sesión con Google. Inténtalo de nuevo.");
-        }
-        console.log("AuthContext signInWithGoogle: Google sign-in and session setup successful for:", result.user.email);
-      }
-      return result.user;
+      console.log("AuthContext signInWithGoogle: Attempting Google sign-in with redirect.");
+      await signInWithRedirect(authInstance, provider);
+      // Page will redirect, user will be caught by getRedirectResult on page load.
     } catch (error) {
-      return handleAuthOperationError(error, "signInWithGoogle");
+      console.error("AuthContext signInWithGoogle: Error initiating redirect:", error);
+      const authError = error as AuthError;
+      // This error happens *before* redirect, e.g. network issue, config.
+      // It's unlikely to be auth/popup-closed-by-user here.
+      throw authError;
     }
   };
 
   const logout = async () => {
     console.log("AuthContext logout: Attempting logout.");
     if (!isFirebaseEnabled || !firebaseAuthModule) {
-      // Simulate logout if Firebase isn't configured
       setUser(null);
-      setLoading(false); 
-      await setupSession(null); // Clear cookie
+      setInitialAuthCheckLoading(false); 
+      setIsProcessingRedirect(false);
+      await setupSession(null); 
       router.push("/auth/login");
       console.warn("AuthContext logout: Firebase not configured. Session closed locally.");
       return;
@@ -201,23 +213,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const authInstance = firebaseAuthModule as FirebaseAuthType;
     try {
       await signOut(authInstance);
-      console.log("AuthContext logout: Firebase signOut successful. onAuthStateChanged will handle global state updates & cookie clearing via its setupSession(null).");
-      // onAuthStateChanged will handle setUser(null), setLoading(false), and clearing the cookie via setupSession(null)
+      console.log("AuthContext logout: Firebase signOut successful. onAuthStateChanged will handle global state updates & cookie clearing.");
+      // onAuthStateChanged will set user to null and call setupSession(null).
+      // It will also set initialAuthCheckLoading to false.
+      // We should also ensure isProcessingRedirect is false.
+      setIsProcessingRedirect(false);
       router.push("/auth/login"); 
     } catch (error) {
       console.error("AuthContext logout: Error during Firebase signOut:", error);
-      // Attempt to clear local state and session even if Firebase signOut fails
       await setupSession(null); 
       setUser(null); 
-      setLoading(false);
-      router.push("/auth/login"); // Ensure redirection even on error
+      setInitialAuthCheckLoading(false);
+      setIsProcessingRedirect(false);
+      router.push("/auth/login"); 
       const authError = error as AuthError;
       throw authError;
     }
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, signInWithGoogle, logout, isFirebaseEnabled }}>
+    <AuthContext.Provider value={{ user, loading: combinedLoading, login, register, signInWithGoogle, logout, isFirebaseEnabled }}>
       {children}
     </AuthContext.Provider>
   );

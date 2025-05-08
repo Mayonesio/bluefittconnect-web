@@ -37,38 +37,31 @@ const registerSchema = z.object({
 export type RegisterFormValues = z.infer<typeof registerSchema>;
 
 export default function RegisterPage() {
-  const { register, signInWithGoogle, user, loading: authLoading, isFirebaseEnabled } = useAuth();
+  const { register, signInWithGoogle, user, loading: authContextLoading, isFirebaseEnabled } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [isLoading, setIsLoading] = useState(false);
+  const [isEmailPasswordLoading, setIsEmailPasswordLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   useEffect(() => {
-    // Do not redirect if an auth operation is in progress on this page
-    if (isLoading || isGoogleLoading) {
-      console.log(`RegisterPage useEffect: Auth operation in progress (isLoading: ${isLoading}, isGoogleLoading: ${isGoogleLoading}). Holding redirect.`);
-      return;
-    }
-
-    if (authLoading || !isFirebaseEnabled) {
-      console.log(`RegisterPage useEffect: Conditions not met for redirect (authLoading: ${authLoading}, isFirebaseEnabled: ${isFirebaseEnabled}, user: ${!!user})`);
-      return;
-    }
+    console.log(`RegisterPage useEffect: user: ${!!user}, authContextLoading: ${authContextLoading}, isFirebaseEnabled: ${isFirebaseEnabled}, localEmailLoading: ${isEmailPasswordLoading}, localGoogleLoading: ${isGoogleLoading}`);
     
-    if (user) { 
+    if (user && !authContextLoading && isFirebaseEnabled) {
       const redirectUrl = searchParams.get("redirect") || "/";
-      console.log(`RegisterPage useEffect: User authenticated and no local operation in progress. Redirecting to: ${redirectUrl}`);
+      console.log(`RegisterPage useEffect: User authenticated and all loading finished. Redirecting to: ${redirectUrl}`);
       router.push(redirectUrl);
-    } else { 
-      console.log(`RegisterPage useEffect: User not authenticated. No redirect.`);
+    } else if (user && authContextLoading) {
+      console.log(`RegisterPage useEffect: User present, but auth context still loading. Waiting for authContextLoading to be false.`);
+    } else {
+      console.log(`RegisterPage useEffect: No user or Firebase not ready/still loading. No redirect.`);
     }
-  }, [user, authLoading, router, searchParams, isFirebaseEnabled, isLoading, isGoogleLoading]);
+  }, [user, authContextLoading, router, searchParams, isFirebaseEnabled]);
 
   useEffect(() => {
-    if (!authLoading && !isFirebaseEnabled && !user) {
+    if (!isFirebaseEnabled && !authContextLoading && !user) {
       toast({
         title: "Error de Configuración de Firebase",
         description: "Las funciones de autenticación están deshabilitadas. Contacte al administrador o revise la configuración de Firebase.",
@@ -76,7 +69,7 @@ export default function RegisterPage() {
         duration: Infinity, 
       });
     }
-  }, [authLoading, isFirebaseEnabled, user, toast]);
+  }, [isFirebaseEnabled, authContextLoading, user, toast]);
 
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
@@ -94,28 +87,17 @@ export default function RegisterPage() {
         description: "Firebase no está configurado. No se puede registrar.",
         variant: "destructive",
       });
-      setIsLoading(false);
       return;
     }
-    setIsLoading(true);
-    console.log("RegisterPage onSubmit: Attempting registration...");
+    setIsEmailPasswordLoading(true);
+    console.log("RegisterPage onSubmit: Attempting email/password registration...");
     try {
-      const firebaseUser = await register(data);
-      if (firebaseUser) {
-        console.log("RegisterPage onSubmit: Registration successful for user:", firebaseUser.email);
-        toast({
-          title: "¡Registro Exitoso!",
-          description: "Tu cuenta ha sido creada. Bienvenido a Blufitt Connect.",
-        });
-        // Redirection is handled by the useEffect hook
-      } else {
-        console.log("RegisterPage onSubmit: Registration returned no user, but no error from AuthContext.register. Unexpected state.");
-        toast({
-          title: "Error de Registro",
-          description: "No se pudo completar el registro. Inténtalo de nuevo.",
-          variant: "destructive",
-        });
-      }
+      await register(data);
+      toast({
+        title: "¡Registro Exitoso!",
+        description: "Tu cuenta ha sido creada. Bienvenido a Blufitt Connect.",
+      });
+      // Redirection handled by useEffect
     } catch (error) {
       const authError = error as AuthError;
       console.error("RegisterPage onSubmit: Registration error:", authError.code, authError.message);
@@ -126,9 +108,9 @@ export default function RegisterPage() {
         errorMessage = "El formato del correo electrónico no es válido.";
       } else if (authError.code === "auth/weak-password") {
         errorMessage = "La contraseña es demasiado débil.";
-      } else if (authError.message.includes("Firebase no está configurado")) {
+      } else if (authError.message?.includes("Firebase no está configurado")) {
         errorMessage = authError.message;
-      } else if (authError.message.includes("Error al configurar la sesión")) {
+      } else if (authError.message?.includes("Error al configurar la sesión")) {
         errorMessage = "Hubo un problema al configurar tu sesión tras el registro. Por favor, inténtalo de nuevo.";
       }
       toast({
@@ -137,7 +119,7 @@ export default function RegisterPage() {
         variant: "destructive",
       });
     } finally {
-      setIsLoading(false);
+      setIsEmailPasswordLoading(false);
     }
   };
 
@@ -151,49 +133,25 @@ export default function RegisterPage() {
       return;
     }
     setIsGoogleLoading(true);
-    console.log("RegisterPage handleGoogleSignUp: Attempting Google sign-up...");
+    console.log("RegisterPage handleGoogleSignUp: Attempting Google sign-in (redirect)...");
     try {
-      console.log("RegisterPage handleGoogleSignUp: Calling signInWithGoogle from AuthContext. Timestamp:", Date.now());
-      const firebaseUser = await signInWithGoogle();
-      console.log("RegisterPage handleGoogleSignUp: signInWithGoogle call completed. User:", firebaseUser?.email, "Timestamp:", Date.now());
-      if (firebaseUser) {
-        console.log("RegisterPage handleGoogleSignUp: Google sign-up successful for user:", firebaseUser.email);
-        toast({
-          title: "¡Registro con Google Exitoso!",
-          description: "Tu cuenta ha sido creada con Google. Bienvenido a Blufitt Connect.",
-        });
-         // Redirection is handled by the useEffect hook
-      } else {
-        console.log("RegisterPage handleGoogleSignUp: Google sign-up returned no user, but no error from AuthContext.signInWithGoogle. Unexpected state.");
-      }
+      await signInWithGoogle(); // Triggers redirect
+      // No direct user returned. Flow continues via getRedirectResult in AuthContext.
     } catch (error) {
       const authError = error as AuthError;
-      console.error("RegisterPage handleGoogleSignUp: Google sign-up error caught in page. Code:", authError.code, "Message:", authError.message, "Timestamp:", Date.now());
-      let errorMessage = "Error al registrar con Google. Inténtalo de nuevo.";
-       if (authError.code === 'auth/popup-closed-by-user') {
-        errorMessage = 'La ventana de inicio de sesión de Google se cerró inesperadamente o fue bloqueada. Por favor, asegúrate de que los popups estén permitidos para este sitio e inténtalo de nuevo.';
-      } else if (authError.code === 'auth/popup-blocked') {
-        errorMessage = 'El popup de inicio de sesión de Google fue bloqueado por el navegador. Por favor, permite los popups para este sitio e inténtalo de nuevo.';
-      } else if (authError.code === 'auth/account-exists-with-different-credential') {
-        errorMessage = 'Ya existe una cuenta con este correo electrónico usando un método de inicio de sesión diferente. Intenta iniciar sesión.';
-      } else if (authError.message && authError.message.includes("Error al configurar la sesión")) {
-        errorMessage = "Hubo un problema al configurar tu sesión con Google. Por favor, inténtalo de nuevo.";
-      } else if (authError.code) { // Fallback for other Firebase auth errors
-         errorMessage = `Error de Google: ${authError.message} (código: ${authError.code})`;
-      }
+      console.error("RegisterPage handleGoogleSignUp: Error initiating Google sign-in redirect:", authError.code, authError.message);
+      // This error occurs if signInWithRedirect itself fails before navigation.
       toast({
-        title: "Error de Registro con Google",
-        description: errorMessage,
+        title: "Error con Google Sign-Up",
+        description: authError.message || "No se pudo iniciar el proceso de registro con Google.",
         variant: "destructive",
       });
-    } finally {
-      console.log("RegisterPage handleGoogleSignUp: finally block. Setting isGoogleLoading to false. Timestamp:", Date.now());
       setIsGoogleLoading(false);
     }
   };
 
-  if (authLoading && !user) {
-    console.log("RegisterPage: Auth loading, no user. Displaying loading spinner.");
+  if (authContextLoading && !user) {
+    console.log("RegisterPage: AuthContext loading, no user. Displaying loading spinner.");
     return (
       <div className="flex flex-col items-center justify-center h-screen">
         <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-primary"></div>
@@ -204,8 +162,8 @@ export default function RegisterPage() {
     );
   }
   
-  if (!user && !isFirebaseEnabled && !authLoading) {
-     console.log("RegisterPage: Firebase not enabled, no user, not auth loading. Displaying config error.");
+  if (!isFirebaseEnabled && !authContextLoading && !user) {
+     console.log("RegisterPage: Firebase not enabled, not auth loading, no user. Displaying config error.");
      return (
       <Card className="w-full max-w-md shadow-xl">
         <CardHeader className="text-center">
@@ -225,7 +183,9 @@ export default function RegisterPage() {
      );
   }
   
-  console.log(`RegisterPage render: user: ${!!user}, authLoading: ${authLoading}, isFirebaseEnabled: ${isFirebaseEnabled}, isLoading: ${isLoading}, isGoogleLoading: ${isGoogleLoading}`);
+  const pageInteractionDisabled = authContextLoading || isEmailPasswordLoading || isGoogleLoading || !isFirebaseEnabled;
+  console.log(`RegisterPage render: pageInteractionDisabled: ${pageInteractionDisabled} (authCtxLoading: ${authContextLoading}, emailLoading: ${isEmailPasswordLoading}, googleLoading: ${isGoogleLoading}, firebaseEnabled: ${isFirebaseEnabled})`);
+
   return (
     <Card className="w-full max-w-md shadow-xl">
       <CardHeader className="text-center">
@@ -246,7 +206,7 @@ export default function RegisterPage() {
                       type="email" 
                       placeholder="tu@correo.com" 
                       {...field} 
-                      disabled={!isFirebaseEnabled || isLoading || isGoogleLoading || authLoading}
+                      disabled={pageInteractionDisabled}
                     />
                   </FormControl>
                   <FormMessage />
@@ -265,7 +225,7 @@ export default function RegisterPage() {
                         type={showPassword ? "text" : "password"} 
                         placeholder="••••••••" 
                         {...field} 
-                        disabled={!isFirebaseEnabled || isLoading || isGoogleLoading || authLoading}
+                        disabled={pageInteractionDisabled}
                       />
                       <Button
                         type="button"
@@ -274,7 +234,7 @@ export default function RegisterPage() {
                         className="absolute right-1 top-1/2 h-7 w-7 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                         onClick={() => setShowPassword(!showPassword)}
                         aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
-                        disabled={!isFirebaseEnabled || isLoading || isGoogleLoading || authLoading}
+                        disabled={pageInteractionDisabled}
                       >
                         {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </Button>
@@ -296,7 +256,7 @@ export default function RegisterPage() {
                           type={showConfirmPassword ? "text" : "password"} 
                           placeholder="••••••••" 
                           {...field} 
-                          disabled={!isFirebaseEnabled || isLoading || isGoogleLoading || authLoading}
+                          disabled={pageInteractionDisabled}
                         />
                         <Button
                           type="button"
@@ -305,7 +265,7 @@ export default function RegisterPage() {
                           className="absolute right-1 top-1/2 h-7 w-7 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                           onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                           aria-label={showConfirmPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
-                          disabled={!isFirebaseEnabled || isLoading || isGoogleLoading || authLoading}
+                          disabled={pageInteractionDisabled}
                         >
                           {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                         </Button>
@@ -315,13 +275,13 @@ export default function RegisterPage() {
                 </FormItem>
               )}
             />
-            <Button type="submit" className="w-full" disabled={isLoading || authLoading || !isFirebaseEnabled || isGoogleLoading}>
-               {isLoading ? (
+            <Button type="submit" className="w-full" disabled={pageInteractionDisabled}>
+               {isEmailPasswordLoading ? (
                 <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-primary-foreground mr-2"></div>
               ) : (
                 <UserPlus className="mr-2 h-4 w-4" />
               )}
-              {isLoading ? "Registrando..." : "Registrarse"}
+              {isEmailPasswordLoading ? "Registrando..." : "Registrarse"}
             </Button>
           </form>
         </Form>
@@ -336,19 +296,19 @@ export default function RegisterPage() {
           variant="outline" 
           className="w-full" 
           onClick={handleGoogleSignUp}
-          disabled={isGoogleLoading || authLoading || !isFirebaseEnabled || isLoading}
+          disabled={pageInteractionDisabled}
         >
-          {isGoogleLoading ? (
+          {isGoogleLoading || (authContextLoading && !user) ? (
             <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-primary mr-2"></div>
           ) : (
             <GoogleLogo className="mr-2 h-5 w-5" />
           )}
-          {isGoogleLoading ? "Conectando..." : "Registrarse con Google"}
+          {isGoogleLoading || (authContextLoading && !user) ? "Conectando..." : "Registrarse con Google"}
         </Button>
 
         <p className="mt-6 text-center text-sm text-muted-foreground">
           ¿Ya tienes una cuenta?{" "}
-          <Button variant="link" asChild className="p-0 h-auto font-medium text-primary" disabled={!isFirebaseEnabled || isLoading || isGoogleLoading || authLoading}>
+          <Button variant="link" asChild className="p-0 h-auto font-medium text-primary" disabled={pageInteractionDisabled}>
             <Link href="/auth/login">Inicia sesión aquí</Link>
           </Button>
         </p>
