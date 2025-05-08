@@ -43,18 +43,16 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
-    // If auth is still loading, or if Firebase isn't enabled, don't try to redirect yet.
     if (authLoading || !isFirebaseEnabled) {
       console.log(`LoginPage useEffect: Conditions not met for redirect (authLoading: ${authLoading}, isFirebaseEnabled: ${isFirebaseEnabled}, user: ${!!user})`);
       return;
     }
 
-    // If auth has finished loading and Firebase is enabled:
-    if (user) { // If user is authenticated
+    if (user) { 
       const redirectUrl = searchParams.get("redirect") || "/";
       console.log(`LoginPage useEffect: User authenticated. Redirecting to: ${redirectUrl}`);
       router.push(redirectUrl);
-    } else { // If user is not authenticated (and auth not loading, firebase enabled)
+    } else { 
       console.log(`LoginPage useEffect: User not authenticated. No redirect.`);
     }
   }, [user, authLoading, router, searchParams, isFirebaseEnabled]);
@@ -99,25 +97,29 @@ export default function LoginPage() {
           title: "¡Bienvenido de Nuevo!",
           description: "Has iniciado sesión correctamente.",
         });
-        // Redirection will be handled by the useEffect hook watching user and authLoading state
+        // Redirection is handled by the useEffect hook watching user and authLoading state
       } else {
-        console.log("LoginPage onSubmit: Login returned no user, this shouldn't happen if successful.");
+        // This case should ideally not be reached if login promise resolves without error but no user.
+        // AuthContext's login now throws if session setup fails post-login.
+        console.log("LoginPage onSubmit: Login returned no user, but no error was thrown by AuthContext.login. This indicates an unexpected state.");
          toast({
           title: "Error de Inicio de Sesión",
-          description: "No se pudo iniciar sesión. Verifica tus credenciales.",
+          description: "No se pudo iniciar sesión. Inténtalo de nuevo.",
           variant: "destructive",
         });
       }
     } catch (error) {
       const authError = error as AuthError;
-      console.error("LoginPage onSubmit: Login error:", authError);
-      let errorMessage = "Error al iniciar sesión. Por favor, verifica tus credenciales.";
+      console.error("LoginPage onSubmit: Login error:", authError.code, authError.message);
+      let errorMessage = "Error al iniciar sesión. Por favor, verifica tus credenciales e inténtalo de nuevo.";
       if (authError.code === "auth/user-not-found" || authError.code === "auth/wrong-password" || authError.code === "auth/invalid-credential") {
         errorMessage = "Correo electrónico o contraseña incorrectos.";
       } else if (authError.code === "auth/invalid-email") {
         errorMessage = "El formato del correo electrónico no es válido.";
       } else if (authError.message.includes("Firebase no está configurado")) {
         errorMessage = authError.message;
+      } else if (authError.message.includes("Error al configurar la sesión")) {
+        errorMessage = "Hubo un problema al configurar tu sesión. Por favor, inténtalo de nuevo.";
       }
       toast({
         title: "Error de Inicio de Sesión",
@@ -148,25 +150,27 @@ export default function LoginPage() {
           title: "¡Bienvenido!",
           description: "Has iniciado sesión correctamente con Google.",
         });
-        // Redirection will be handled by the useEffect hook watching user and authLoading state
+        // Redirection is handled by the useEffect hook
       } else {
-        // This case (firebaseUser is null but no error thrown from signInWithGoogle) should be rare
-        // if signInWithGoogle always throws on failure or returns a user.
-        console.log("LoginPage handleGoogleSignIn: Google sign-in returned no user but also no error from AuthContext.signInWithGoogle.");
+        console.log("LoginPage handleGoogleSignIn: Google sign-in returned no user, but no error from AuthContext.signInWithGoogle. Unexpected state.");
         toast({
           title: "Error de Inicio de Sesión con Google",
-          description: "No se pudo iniciar sesión con Google. Inténtalo de nuevo.",
+          description: "No se pudo completar el inicio de sesión con Google. Inténtalo de nuevo.",
           variant: "destructive",
         });
       }
     } catch (error) {
       const authError = error as AuthError;
-      console.error("LoginPage handleGoogleSignIn: Google sign-in error:", authError);
+      console.error("LoginPage handleGoogleSignIn: Google sign-in error:", authError.code, authError.message);
       let errorMessage = "Error al iniciar sesión con Google. Inténtalo de nuevo.";
       if (authError.code === 'auth/popup-closed-by-user') {
-        errorMessage = 'Has cerrado la ventana de inicio de sesión de Google. Proceso cancelado.';
+        errorMessage = 'La ventana de inicio de sesión de Google se cerró inesperadamente o fue bloqueada. Por favor, asegúrate de que los popups estén permitidos para este sitio e inténtalo de nuevo.';
+      } else if (authError.code === 'auth/popup-blocked') {
+        errorMessage = 'El popup de inicio de sesión de Google fue bloqueado por el navegador. Por favor, permite los popups para este sitio e inténtalo de nuevo.';
       } else if (authError.code === 'auth/account-exists-with-different-credential') {
         errorMessage = 'Ya existe una cuenta con este correo electrónico usando un método de inicio de sesión diferente.';
+      } else if (authError.message.includes("Error al configurar la sesión")) {
+        errorMessage = "Hubo un problema al configurar tu sesión con Google. Por favor, inténtalo de nuevo.";
       }
       toast({
         title: "Error de Inicio de Sesión con Google",
@@ -211,6 +215,8 @@ export default function LoginPage() {
      );
   }
 
+  // If user is already authenticated and not loading, the useEffect hook should have redirected.
+  // This part of the render is for when user is null and auth is not loading.
   console.log(`LoginPage render: user: ${!!user}, authLoading: ${authLoading}, isFirebaseEnabled: ${isFirebaseEnabled}`);
   return (
     <Card className="w-full max-w-md shadow-xl">
@@ -311,3 +317,4 @@ export default function LoginPage() {
     </Card>
   );
 }
+

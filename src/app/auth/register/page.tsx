@@ -47,18 +47,16 @@ export default function RegisterPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   useEffect(() => {
-     // If auth is still loading, or if Firebase isn't enabled, don't try to redirect yet.
     if (authLoading || !isFirebaseEnabled) {
       console.log(`RegisterPage useEffect: Conditions not met for redirect (authLoading: ${authLoading}, isFirebaseEnabled: ${isFirebaseEnabled}, user: ${!!user})`);
       return;
     }
     
-    // If auth has finished loading and Firebase is enabled:
-    if (user) { // If user is authenticated
+    if (user) { 
       const redirectUrl = searchParams.get("redirect") || "/";
       console.log(`RegisterPage useEffect: User authenticated. Redirecting to: ${redirectUrl}`);
       router.push(redirectUrl);
-    } else { // If user is not authenticated (and auth not loading, firebase enabled)
+    } else { 
       console.log(`RegisterPage useEffect: User not authenticated. No redirect.`);
     }
   }, [user, authLoading, router, searchParams, isFirebaseEnabled]);
@@ -103,18 +101,18 @@ export default function RegisterPage() {
           title: "¡Registro Exitoso!",
           description: "Tu cuenta ha sido creada. Bienvenido a Blufitt Connect.",
         });
-        // Redirection will be handled by the useEffect hook watching user and authLoading state
+        // Redirection is handled by the useEffect hook
       } else {
-        console.log("RegisterPage onSubmit: Registration returned no user, this shouldn't happen if successful.");
+        console.log("RegisterPage onSubmit: Registration returned no user, but no error from AuthContext.register. Unexpected state.");
         toast({
           title: "Error de Registro",
-          description: "No se pudo completar el registro.",
+          description: "No se pudo completar el registro. Inténtalo de nuevo.",
           variant: "destructive",
         });
       }
     } catch (error) {
       const authError = error as AuthError;
-      console.error("RegisterPage onSubmit: Registration error:", authError);
+      console.error("RegisterPage onSubmit: Registration error:", authError.code, authError.message);
       let errorMessage = "Error al registrar. Por favor, inténtalo de nuevo.";
       if (authError.code === "auth/email-already-in-use") {
         errorMessage = "Este correo electrónico ya está registrado.";
@@ -124,6 +122,8 @@ export default function RegisterPage() {
         errorMessage = "La contraseña es demasiado débil.";
       } else if (authError.message.includes("Firebase no está configurado")) {
         errorMessage = authError.message;
+      } else if (authError.message.includes("Error al configurar la sesión")) {
+        errorMessage = "Hubo un problema al configurar tu sesión tras el registro. Por favor, inténtalo de nuevo.";
       }
       toast({
         title: "Error de Registro",
@@ -154,9 +154,9 @@ export default function RegisterPage() {
           title: "¡Registro con Google Exitoso!",
           description: "Tu cuenta ha sido creada con Google. Bienvenido a Blufitt Connect.",
         });
-         // Redirection will be handled by the useEffect hook watching user and authLoading state
+         // Redirection is handled by the useEffect hook
       } else {
-        console.log("RegisterPage handleGoogleSignUp: Google sign-up returned no user.");
+        console.log("RegisterPage handleGoogleSignUp: Google sign-up returned no user, but no error from AuthContext.signInWithGoogle. Unexpected state.");
         toast({
           title: "Error de Registro con Google",
           description: "No se pudo registrar con Google. Inténtalo de nuevo.",
@@ -165,12 +165,16 @@ export default function RegisterPage() {
       }
     } catch (error) {
       const authError = error as AuthError;
-      console.error("RegisterPage handleGoogleSignUp: Google sign-up error:", authError);
+      console.error("RegisterPage handleGoogleSignUp: Google sign-up error:", authError.code, authError.message);
       let errorMessage = "Error al registrar con Google. Inténtalo de nuevo.";
        if (authError.code === 'auth/popup-closed-by-user') {
-        errorMessage = 'Has cerrado la ventana de inicio de sesión de Google. Proceso cancelado.';
+        errorMessage = 'La ventana de inicio de sesión de Google se cerró inesperadamente o fue bloqueada. Por favor, asegúrate de que los popups estén permitidos para este sitio e inténtalo de nuevo.';
+      } else if (authError.code === 'auth/popup-blocked') {
+        errorMessage = 'El popup de inicio de sesión de Google fue bloqueado por el navegador. Por favor, permite los popups para este sitio e inténtalo de nuevo.';
       } else if (authError.code === 'auth/account-exists-with-different-credential') {
         errorMessage = 'Ya existe una cuenta con este correo electrónico usando un método de inicio de sesión diferente. Intenta iniciar sesión.';
+      } else if (authError.message.includes("Error al configurar la sesión")) {
+        errorMessage = "Hubo un problema al configurar tu sesión con Google. Por favor, inténtalo de nuevo.";
       }
       toast({
         title: "Error de Registro con Google",
@@ -214,7 +218,9 @@ export default function RegisterPage() {
       </Card>
      );
   }
-
+  
+  // If user is already authenticated and not loading, the useEffect hook should have redirected.
+  // This part of the render is for when user is null and auth is not loading.
   console.log(`RegisterPage render: user: ${!!user}, authLoading: ${authLoading}, isFirebaseEnabled: ${isFirebaseEnabled}`);
   return (
     <Card className="w-full max-w-md shadow-xl">
@@ -346,3 +352,4 @@ export default function RegisterPage() {
     </Card>
   );
 }
+

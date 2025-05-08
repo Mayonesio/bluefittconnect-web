@@ -74,23 +74,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const unsubscribe = onAuthStateChanged(authInstance, async (currentFirebaseUser) => {
       console.log("AuthContext onAuthStateChanged: User state changed. Current user:", currentFirebaseUser?.email || null);
       
+      // Update user state and loading status first.
+      setUser(currentFirebaseUser);
+      setLoading(false);
+
+      // Attempt to set up or clear the session cookie based on the Firebase user state.
       const sessionSetupSuccess = await setupSession(currentFirebaseUser);
 
       if (currentFirebaseUser && !sessionSetupSuccess) {
-        // If a user object exists but we failed to get/set the ID token (cookie),
-        // this means the middleware won't see them as authenticated.
-        // To prevent redirect loops and inconsistent states, sign the user out.
-        // This will trigger onAuthStateChanged again, but with currentFirebaseUser as null.
-        console.warn("AuthContext: Session setup (getIdToken) failed for user. Signing out user to ensure consistent state.");
-        await signOut(authInstance); 
-        // setUser(null) and setLoading(false) will be handled by the *next* onAuthStateChanged call.
-        // Cookie is already cleared by the failed setupSession call.
-        return; // Important: return early to avoid setting user/loading state based on inconsistent data
+        // If a Firebase user exists but we couldn't set up our session cookie (e.g., getIdToken failed),
+        // log a warning. This state might cause issues if middleware relies on the cookie.
+        // We are no longer calling signOut() here aggressively, as it might interrupt ongoing auth flows
+        // like signInWithPopup. The individual auth methods (login, register, signInWithGoogle)
+        // are responsible for handling signOut if their specific session setup fails.
+        console.warn(
+          "AuthContext onAuthStateChanged: Firebase user exists, but session cookie setup failed. User:",
+          currentFirebaseUser.email,
+          "This might lead to issues if the cookie is required by middleware or for subsequent operations."
+        );
       }
       
-      setUser(currentFirebaseUser); 
-      setLoading(false);
-      console.log("AuthContext onAuthStateChanged: User and loading state updated. Loading:", false, "User:", currentFirebaseUser?.email || null);
+      console.log("AuthContext onAuthStateChanged: User and loading state fully updated. Loading:", false, "User:", currentFirebaseUser?.email || null);
     });
     return () => {
       console.log("AuthContext useEffect: Cleaning up auth state listener.");
@@ -100,7 +104,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const handleAuthOperationError = async (error: any, operationName: string) => {
     console.error(`AuthContext ${operationName}: Error:`, error);
-    await setupSession(null); // Ensure cookie is cleared on any auth operation error
+    // It's generally good to ensure the session is cleared if an auth operation fails,
+    // especially if it's an error that implies an invalid or incomplete auth state.
+    await setupSession(null); 
     const authError = error as AuthError;
     throw authError; // Re-throw for the UI to handle
   };
@@ -118,13 +124,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const sessionSetupSuccess = await setupSession(userCredential.user);
         if (!sessionSetupSuccess) {
           console.warn("AuthContext login: Session setup failed after login. Signing out.");
-          await signOut(authInstance); // Triggers onAuthStateChanged to nullify user
+          await signOut(authInstance); // Triggers onAuthStateChanged to nullify user & clear cookie via its setupSession(null)
           throw new Error("Error al configurar la sesión después del inicio de sesión. Inténtalo de nuevo.");
         }
         console.log("AuthContext login: Sign-in and session setup successful for:", userCredential.user.email);
       }
-      return userCredential.user; // `onAuthStateChanged` will set the global state
+      // onAuthStateChanged will handle setUser and setLoading.
+      return userCredential.user; 
     } catch (error) {
+      // error will be AuthError from signInWithEmailAndPassword or the custom error from session setup failure
       return handleAuthOperationError(error, "login");
     }
   };
@@ -160,7 +168,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
     const authInstance = firebaseAuthModule as FirebaseAuthType;
     const provider = new GoogleAuthProvider();
-    console.log(`AuthContext signInWithGoogle: Using auth domain: ${authInstance.config.authDomain}`); // Diagnostic log
+    console.log(`AuthContext signInWithGoogle: Using auth domain: ${authInstance.config.authDomain}`); 
     try {
       console.log("AuthContext signInWithGoogle: Attempting Google sign-in popup.");
       const result = await signInWithPopup(authInstance, provider);
@@ -193,17 +201,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const authInstance = firebaseAuthModule as FirebaseAuthType;
     try {
       await signOut(authInstance);
-      console.log("AuthContext logout: Firebase signOut successful. onAuthStateChanged will handle global state updates & cookie.");
+      console.log("AuthContext logout: Firebase signOut successful. onAuthStateChanged will handle global state updates & cookie clearing via its setupSession(null).");
       // onAuthStateChanged will handle setUser(null), setLoading(false), and clearing the cookie via setupSession(null)
       router.push("/auth/login"); 
     } catch (error) {
-       // Even if signOut fails, attempt to clear local state
       console.error("AuthContext logout: Error during Firebase signOut:", error);
-      await setupSession(null); // Clear cookie
-      setUser(null); // Force local state update
+      // Attempt to clear local state and session even if Firebase signOut fails
+      await setupSession(null); 
+      setUser(null); 
       setLoading(false);
+      router.push("/auth/login"); // Ensure redirection even on error
       const authError = error as AuthError;
-      throw authError; // Re-throw for UI or further handling
+      throw authError;
     }
   };
 
@@ -221,4 +230,3 @@ export const useAuth = (): AuthContextType => {
   }
   return context;
 };
-
