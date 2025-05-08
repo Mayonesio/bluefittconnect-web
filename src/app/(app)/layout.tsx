@@ -28,6 +28,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from '@/contexts/auth-context';
 import { useToast } from "@/hooks/use-toast";
+import Breadcrumb from '@/components/layout/breadcrumb'; // Import Breadcrumb
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -98,7 +99,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
               <SidebarTrigger />
             </div>
             <div className="flex-1">
-              {/* Placeholder for breadcrumbs or page title */}
+              <Breadcrumb /> {/* Add Breadcrumb component here */}
             </div>
             {loading ? (
               <div className="h-9 w-9 rounded-full bg-muted animate-pulse" />
