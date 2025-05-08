@@ -19,7 +19,7 @@ import Link from "next/link";
 import { useAuth } from "@/contexts/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react"; // Added Suspense
 import type { AuthError } from "firebase/auth";
 import { Eye, EyeOff, UserPlus, AlertTriangle } from "lucide-react";
 import { GoogleLogo } from "@/components/icons/google-logo";
@@ -36,11 +36,11 @@ const registerSchema = z.object({
 
 export type RegisterFormValues = z.infer<typeof registerSchema>;
 
-export default function RegisterPage() {
+function RegisterContent() {
   const { register, signInWithGoogle, user, loading: authContextLoading, isFirebaseEnabled } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
-  const searchParams = useSearchParams();
+  const searchParams = useSearchParams(); // useSearchParams is used here
   const [isEmailPasswordLoading, setIsEmailPasswordLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -106,7 +106,6 @@ export default function RegisterPage() {
         description: "Tu cuenta ha sido creada. Bienvenido a Blufitt Connect.",
       });
       console.log(`[${timestamp}] RegisterPage onSubmit: Email/password registration call successful for ${data.email}. Redirection useEffect will handle next steps upon user state update.`);
-      // Redirection handled by useEffect
     } catch (error) {
       const authError = error as AuthError;
       console.error(`[${timestamp}] RegisterPage onSubmit: Registration ERROR for ${data.email}: Code: ${authError.code}, Message: ${authError.message}`, authError);
@@ -173,7 +172,7 @@ export default function RegisterPage() {
       console.log(`[${new Date().toISOString()}] RegisterPage handleGoogleSignUp: FINALLY block. isGoogleLoading set to false.`);
     }
   };
-
+  
   const timestampRenderStart = new Date().toISOString();
   if (authContextLoading && !user) {
     console.log(`[${timestampRenderStart}] RegisterPage RENDER: AuthContext loading (initial check: ${authContextLoading}), NO user. Displaying loading spinner.`);
@@ -340,3 +339,18 @@ export default function RegisterPage() {
     </Card>
   );
 }
+
+
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex flex-col items-center justify-center h-screen">
+        <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-primary"></div>
+        <p className="mt-4 text-muted-foreground">Cargando página de registro...</p>
+      </div>
+    }>
+      <RegisterContent />
+    </Suspense>
+  );
+}
+

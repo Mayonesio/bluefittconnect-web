@@ -19,12 +19,11 @@ import Link from "next/link";
 import { useAuth } from "@/contexts/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react"; // Added Suspense
 import type { AuthError } from "firebase/auth";
 import { Eye, EyeOff, LogIn as LoginIcon, AlertTriangle } from "lucide-react";
 import { GoogleLogo } from "@/components/icons/google-logo";
 import { Separator } from "@/components/ui/separator";
-
 
 const loginSchema = z.object({
   email: z.string().email("Debe ser un correo electrónico válido."),
@@ -33,17 +32,16 @@ const loginSchema = z.object({
 
 export type LoginFormValues = z.infer<typeof loginSchema>;
 
-export default function LoginPage() {
+function LoginContent() {
   const { login, signInWithGoogle, user, loading: authContextLoading, isFirebaseEnabled } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
-  const searchParams = useSearchParams();
+  const searchParams = useSearchParams(); // useSearchParams is used here
   const [isEmailPasswordLoading, setIsEmailPasswordLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
   const pageInteractionDisabled = authContextLoading || isEmailPasswordLoading || isGoogleLoading || !isFirebaseEnabled;
-
 
   useEffect(() => {
     const timestamp = new Date().toISOString();
@@ -60,7 +58,6 @@ export default function LoginPage() {
        if (!isFirebaseEnabled) console.log(`[${timestamp}] LoginPage Redirect useEffect: Reason: Firebase not enabled.`);
     }
   }, [user, authContextLoading, router, searchParams, isFirebaseEnabled]);
-
 
   useEffect(() => {
     const timestamp = new Date().toISOString();
@@ -98,7 +95,6 @@ export default function LoginPage() {
     console.log(`[${timestamp}] LoginPage onSubmit: Attempting email/password login for ${data.email}...`);
     try {
       await login(data);
-      // Redirection is handled by the useEffect hook watching user and authContextLoading
       toast({
         title: "¡Bienvenido de Nuevo!",
         description: "Has iniciado sesión correctamente.",
@@ -142,11 +138,8 @@ export default function LoginPage() {
     setIsGoogleLoading(true);
     console.log(`[${timestamp}] LoginPage handleGoogleSignIn: Attempting Google sign-in (POPUP)... isGoogleLoading: true`);
     try {
-      await signInWithGoogle(); // This is Promise<void>; success/failure handled by onAuthStateChanged and error catching
-      // If signInWithGoogle resolves, the popup process itself didn't throw an immediate error.
-      // The useEffect hook watching 'user' and 'authContextLoading' will handle redirection upon state change.
+      await signInWithGoogle(); 
       console.log(`[${timestamp}] LoginPage handleGoogleSignIn: signInWithGoogle (POPUP) call completed. Waiting for user state change from onAuthStateChanged.`);
-      // A success toast here might be premature. Let redirection useEffect handle positive feedback.
     } catch (error) {
       const authError = error as AuthError;
       const errorTimestamp = new Date().toISOString();
@@ -171,7 +164,7 @@ export default function LoginPage() {
       console.log(`[${new Date().toISOString()}] LoginPage handleGoogleSignIn: FINALLY block. isGoogleLoading set to false.`);
     }
   };
-
+  
   const timestampRenderStart = new Date().toISOString();
   if (authContextLoading && !user) {
     console.log(`[${timestampRenderStart}] LoginPage RENDER: AuthContext loading (initial check: ${authContextLoading}), NO user. Displaying loading spinner.`);
@@ -307,3 +300,17 @@ export default function LoginPage() {
     </Card>
   );
 }
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex flex-col items-center justify-center h-screen">
+        <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-primary"></div>
+        <p className="mt-4 text-muted-foreground">Cargando página de inicio de sesión...</p>
+      </div>
+    }>
+      <LoginContent />
+    </Suspense>
+  );
+}
+

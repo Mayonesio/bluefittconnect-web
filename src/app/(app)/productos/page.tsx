@@ -1,5 +1,5 @@
 // src/app/(app)/productos/page.tsx
-"use client"; // Esta directiva es crucial para que este archivo sea un Client Component
+"use client"; 
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,9 +14,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-// Importamos Suspense de React
 import React, { useState, useMemo, useEffect, Suspense } from "react";
-// useSearchParams y useRouter se usan dentro de ProductosContent ahora
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useAuth } from "@/contexts/auth-context";
 
@@ -47,29 +45,22 @@ const categoriesList: { value: Producto['categoria'], label: string }[] = [
     { value: 'Caudalímetro', label: 'Caudalímetros' },
 ];
 
-// Creamos un componente separado para el contenido que usa useSearchParams y useRouter
-// Al estar definido dentro de un archivo 'use client', este componente también lo será.
 function ProductosContent() {
-  // useSearchParams y useRouter ahora se usan DENTRO de este componente
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { user, loading } = useAuth(); // useAuth también debe ser compatible con Client Components
+  const { user, loading } = useAuth(); 
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
 
-  // Este efecto se ejecuta en el cliente, usando searchParams
   useEffect(() => {
     const initialCategory = searchParams.get('categoria');
     if (initialCategory && categoriesList.some(c => c.value.toLowerCase() === initialCategory)) {
-      // Convertir la categoría inicial a minúsculas para que coincida con la lógica de selectedCategories
       setSelectedCategories([initialCategory.toLowerCase()]);
     } else if (initialCategory === null && searchParams.toString() === '') {
-      // Solo resetear si no hay parámetros en absoluto
        setSelectedCategories([]);
     }
-    // Considera si necesitas manejar el `q` para el término de búsqueda desde la URL aquí también
-  }, [searchParams]); // Dependencia de searchParams para reaccionar a cambios en la URL
+  }, [searchParams]); 
 
   const handleCategoryChange = (categoryValue: string) => {
     const categoryKey = categoryValue.toLowerCase();
@@ -82,23 +73,14 @@ function ProductosContent() {
     }
     setSelectedCategories(newSelectedCategories);
 
-    // Construimos los nuevos parámetros de URL
-    const newParams = new URLSearchParams(searchParams.toString()); // Mantenemos otros params existentes
+    const newParams = new URLSearchParams(searchParams.toString()); 
     if (newSelectedCategories.length === 1) {
        newParams.set('categoria', newSelectedCategories[0]);
     } else if (newSelectedCategories.length > 1) {
-       // Si hay múltiples categorías seleccionadas, quita el parámetro 'categoria'
-       // ya que la lógica actual no soporta múltiples categorías en el parámetro 'categoria'
-       // Si necesitaras soportar múltiples, el parámetro debería ser diferente o repetido.
        newParams.delete('categoria');
-       // O podrías codificarlas de alguna forma, ej: newParams.set('categorias', newSelectedCategories.join(','));
-    } else { // Si no hay categorías seleccionadas
+    } else { 
       newParams.delete('categoria');
     }
-     // Idealmente, también deberías añadir el searchTerm a newParams si quieres que se refleje en la URL
-     // if (searchTerm) { newParams.set('q', searchTerm); } else { newParams.delete('q'); }
-
-    // Navegar a la nueva URL
     router.push(`/productos?${newParams.toString()}`);
   };
 
@@ -119,7 +101,6 @@ function ProductosContent() {
     return null;
   }
 
-  // Todo el JSX principal de la página va aquí
   return (
      <div className="flex flex-col gap-8">
       <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -129,8 +110,6 @@ function ProductosContent() {
             Explore nuestra selección de válvulas, racores y caudalímetros.
           </p>
         </div>
-        {/* El botón para añadir productos también debería estar aquí si depende de useAuth */}
-        {/* Podrías pasar user y loading como props si ProductsContent fuera un archivo separado sin access a useAuth */}
         <Button disabled={!user || loading} title={!user ? "Debe iniciar sesión para añadir productos" : ""}>
           <PlusCircle className="mr-2 h-4 w-4" /> Añadir Nuevo Producto
         </Button>
@@ -222,13 +201,16 @@ function ProductosContent() {
   );
 }
 
-// Este es el componente de página principal exportado.
-// Envuelve el contenido que usa useSearchParams dentro de Suspense.
 export default function ProductosPage() {
   return (
-    // <Suspense> necesita un 'fallback' que se muestra mientras se carga el componente cliente
-    <Suspense fallback={<div>Cargando productos...</div>}>
+    <Suspense fallback={
+      <div className="flex flex-col items-center justify-center h-screen">
+        <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-primary"></div>
+        <p className="mt-4 text-muted-foreground">Cargando productos...</p>
+      </div>
+    }>
       <ProductosContent />
     </Suspense>
   );
 }
+
