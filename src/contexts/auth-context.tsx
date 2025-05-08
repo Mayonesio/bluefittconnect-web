@@ -160,6 +160,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
     const authInstance = firebaseAuthModule as FirebaseAuthType;
     const provider = new GoogleAuthProvider();
+    console.log(`AuthContext signInWithGoogle: Using auth domain: ${authInstance.config.authDomain}`); // Diagnostic log
     try {
       console.log("AuthContext signInWithGoogle: Attempting Google sign-in popup.");
       const result = await signInWithPopup(authInstance, provider);
@@ -220,3 +221,4 @@ export const useAuth = (): AuthContextType => {
   }
   return context;
 };
+
