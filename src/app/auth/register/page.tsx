@@ -22,7 +22,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { AuthError } from "firebase/auth";
 import { Eye, EyeOff, UserPlus, AlertTriangle } from "lucide-react";
-import { GoogleLogo } from "@/components/icons/google-logo"; 
+import { GoogleLogo } from "@/components/icons/google-logo";
 import { Separator } from "@/components/ui/separator";
 
 const registerSchema = z.object({
@@ -51,7 +51,7 @@ export default function RegisterPage() {
   useEffect(() => {
     const timestamp = new Date().toISOString();
     console.log(`[${timestamp}] RegisterPage Redirect useEffect: user: ${!!user}, authContextLoading: ${authContextLoading}, isFirebaseEnabled: ${isFirebaseEnabled}`);
-    
+
     if (user && !authContextLoading && isFirebaseEnabled) {
       const redirectUrl = searchParams.get("redirect") || "/";
       console.log(`[${timestamp}] RegisterPage Redirect useEffect: User authenticated, NOT auth loading, Firebase enabled. REDIRECTING to: ${redirectUrl}`);
@@ -59,7 +59,7 @@ export default function RegisterPage() {
     } else {
       console.log(`[${timestamp}] RegisterPage Redirect useEffect: Conditions NOT MET for redirect.`);
        if (!user) console.log(`[${timestamp}] RegisterPage Redirect useEffect: Reason: No user.`);
-       if (authContextLoading) console.log(`[${timestamp}] RegisterPage Redirect useEffect: Reason: AuthContext still loading.`);
+       if (authContextLoading) console.log(`[${timestamp}] RegisterPage Redirect useEffect: Reason: AuthContext still loading (initial auth check).`);
        if (!isFirebaseEnabled) console.log(`[${timestamp}] RegisterPage Redirect useEffect: Reason: Firebase not enabled.`);
     }
   }, [user, authContextLoading, router, searchParams, isFirebaseEnabled]);
@@ -72,7 +72,7 @@ export default function RegisterPage() {
         title: "Error de Configuración de Firebase",
         description: "Las funciones de autenticación están deshabilitadas. Contacte al administrador o revise la configuración de Firebase.",
         variant: "destructive",
-        duration: Infinity, 
+        duration: Infinity,
       });
     }
   }, [isFirebaseEnabled, authContextLoading, user, toast]);
@@ -105,7 +105,7 @@ export default function RegisterPage() {
         title: "¡Registro Exitoso!",
         description: "Tu cuenta ha sido creada. Bienvenido a Blufitt Connect.",
       });
-      console.log(`[${timestamp}] RegisterPage onSubmit: Email/password registration SUCCESSFUL for ${data.email}. Redirection useEffect will handle next steps.`);
+      console.log(`[${timestamp}] RegisterPage onSubmit: Email/password registration call successful for ${data.email}. Redirection useEffect will handle next steps upon user state update.`);
       // Redirection handled by useEffect
     } catch (error) {
       const authError = error as AuthError;
@@ -145,26 +145,38 @@ export default function RegisterPage() {
       return;
     }
     setIsGoogleLoading(true);
-    console.log(`[${timestamp}] RegisterPage handleGoogleSignUp: Attempting Google sign-in (redirect)... isGoogleLoading: true`);
+    console.log(`[${timestamp}] RegisterPage handleGoogleSignUp: Attempting Google sign-up (POPUP)... isGoogleLoading: true`);
     try {
-      await signInWithGoogle(); 
-      console.log(`[${timestamp}] RegisterPage handleGoogleSignUp: signInWithGoogle call completed (should have redirected).`);
+      await signInWithGoogle();
+      console.log(`[${timestamp}] RegisterPage handleGoogleSignUp: signInWithGoogle (POPUP) call completed. Waiting for user state change from onAuthStateChanged.`);
     } catch (error) {
       const authError = error as AuthError;
-      console.error(`[${timestamp}] RegisterPage handleGoogleSignUp: Error INITIATING Google sign-in redirect: Code: ${authError.code}, Message: ${authError.message}`, authError);
+      const errorTimestamp = new Date().toISOString();
+      console.error(`[${errorTimestamp}] RegisterPage handleGoogleSignUp: Error with Google Sign-Up (POPUP): Code: ${authError.code}, Message: ${authError.message}`, authError);
+      let errorMessage = "No se pudo registrar con Google. Inténtalo de nuevo.";
+       if (authError.code === 'auth/popup-closed-by-user') {
+        errorMessage = "El registro con Google fue cancelado.";
+      } else if (authError.code === 'auth/popup-blocked') {
+        errorMessage = "El navegador bloqueó la ventana emergente de Google. Por favor, habilita las ventanas emergentes para este sitio.";
+      } else if (authError.code === 'auth/cancelled-popup-request') {
+        errorMessage = "Se canceló una solicitud de ventana emergente. Por favor, inténtalo de nuevo.";
+      } else if (authError.message?.includes("Firebase no está configurado")) {
+        errorMessage = authError.message;
+      }
       toast({
         title: "Error con Google Sign-Up",
-        description: authError.message || "No se pudo iniciar el proceso de registro con Google.",
+        description: errorMessage,
         variant: "destructive",
       });
+    } finally {
       setIsGoogleLoading(false);
-      console.log(`[${timestamp}] RegisterPage handleGoogleSignUp: Error caught, isGoogleLoading set to false.`);
+      console.log(`[${new Date().toISOString()}] RegisterPage handleGoogleSignUp: FINALLY block. isGoogleLoading set to false.`);
     }
   };
 
   const timestampRenderStart = new Date().toISOString();
   if (authContextLoading && !user) {
-    console.log(`[${timestampRenderStart}] RegisterPage RENDER: AuthContext loading (combined: ${authContextLoading}), NO user. Displaying loading spinner.`);
+    console.log(`[${timestampRenderStart}] RegisterPage RENDER: AuthContext loading (initial check: ${authContextLoading}), NO user. Displaying loading spinner.`);
     return (
       <div className="flex flex-col items-center justify-center h-screen">
         <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-primary"></div>
@@ -174,7 +186,7 @@ export default function RegisterPage() {
       </div>
     );
   }
-  
+
   if (!isFirebaseEnabled && !authContextLoading && !user) {
      console.log(`[${timestampRenderStart}] RegisterPage RENDER: Firebase NOT enabled, NOT auth loading, NO user. Displaying config error card.`);
      return (
@@ -195,7 +207,7 @@ export default function RegisterPage() {
       </Card>
      );
   }
-  
+
   console.log(`[${timestampRenderStart}] RegisterPage RENDER: Rendering form. pageInteractionDisabled: ${pageInteractionDisabled} (authCtxLoading: ${authContextLoading}, emailLoading: ${isEmailPasswordLoading}, googleLoading: ${isGoogleLoading}, firebaseEnabled: ${isFirebaseEnabled}) User: ${!!user}`);
 
   return (
@@ -214,10 +226,10 @@ export default function RegisterPage() {
                 <FormItem>
                   <FormLabel>Correo Electrónico</FormLabel>
                   <FormControl>
-                    <Input 
-                      type="email" 
-                      placeholder="tu@correo.com" 
-                      {...field} 
+                    <Input
+                      type="email"
+                      placeholder="tu@correo.com"
+                      {...field}
                       disabled={pageInteractionDisabled}
                     />
                   </FormControl>
@@ -233,10 +245,10 @@ export default function RegisterPage() {
                   <FormLabel>Contraseña</FormLabel>
                   <FormControl>
                      <div className="relative">
-                      <Input 
-                        type={showPassword ? "text" : "password"} 
-                        placeholder="••••••••" 
-                        {...field} 
+                      <Input
+                        type={showPassword ? "text" : "password"}
+                        placeholder="••••••••"
+                        {...field}
                         disabled={pageInteractionDisabled}
                       />
                       <Button
@@ -264,10 +276,10 @@ export default function RegisterPage() {
                   <FormLabel>Confirmar Contraseña</FormLabel>
                   <FormControl>
                     <div className="relative">
-                        <Input 
-                          type={showConfirmPassword ? "text" : "password"} 
-                          placeholder="••••••••" 
-                          {...field} 
+                        <Input
+                          type={showConfirmPassword ? "text" : "password"}
+                          placeholder="••••••••"
+                          {...field}
                           disabled={pageInteractionDisabled}
                         />
                         <Button
@@ -304,9 +316,9 @@ export default function RegisterPage() {
           <Separator className="flex-1" />
         </div>
 
-        <Button 
-          variant="outline" 
-          className="w-full" 
+        <Button
+          variant="outline"
+          className="w-full"
           onClick={handleGoogleSignUp}
           disabled={pageInteractionDisabled}
         >
@@ -328,5 +340,3 @@ export default function RegisterPage() {
     </Card>
   );
 }
-
-    

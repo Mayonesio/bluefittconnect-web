@@ -22,7 +22,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { AuthError } from "firebase/auth";
 import { Eye, EyeOff, LogIn as LoginIcon, AlertTriangle } from "lucide-react";
-import { GoogleLogo } from "@/components/icons/google-logo"; 
+import { GoogleLogo } from "@/components/icons/google-logo";
 import { Separator } from "@/components/ui/separator";
 
 
@@ -38,8 +38,8 @@ export default function LoginPage() {
   const { toast } = useToast();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [isEmailPasswordLoading, setIsEmailPasswordLoading] = useState(false); 
-  const [isGoogleLoading, setIsGoogleLoading] = useState(false); 
+  const [isEmailPasswordLoading, setIsEmailPasswordLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
   const pageInteractionDisabled = authContextLoading || isEmailPasswordLoading || isGoogleLoading || !isFirebaseEnabled;
@@ -48,7 +48,7 @@ export default function LoginPage() {
   useEffect(() => {
     const timestamp = new Date().toISOString();
     console.log(`[${timestamp}] LoginPage Redirect useEffect: user: ${!!user}, authContextLoading: ${authContextLoading}, isFirebaseEnabled: ${isFirebaseEnabled}`);
-    
+
     if (user && !authContextLoading && isFirebaseEnabled) {
       const redirectUrl = searchParams.get("redirect") || "/";
       console.log(`[${timestamp}] LoginPage Redirect useEffect: User authenticated, NOT auth loading, Firebase enabled. REDIRECTING to: ${redirectUrl}`);
@@ -56,7 +56,7 @@ export default function LoginPage() {
     } else {
        console.log(`[${timestamp}] LoginPage Redirect useEffect: Conditions NOT MET for redirect.`);
        if (!user) console.log(`[${timestamp}] LoginPage Redirect useEffect: Reason: No user.`);
-       if (authContextLoading) console.log(`[${timestamp}] LoginPage Redirect useEffect: Reason: AuthContext still loading.`);
+       if (authContextLoading) console.log(`[${timestamp}] LoginPage Redirect useEffect: Reason: AuthContext still loading (initial auth check).`);
        if (!isFirebaseEnabled) console.log(`[${timestamp}] LoginPage Redirect useEffect: Reason: Firebase not enabled.`);
     }
   }, [user, authContextLoading, router, searchParams, isFirebaseEnabled]);
@@ -70,7 +70,7 @@ export default function LoginPage() {
         title: "Error de Configuración de Firebase",
         description: "Las funciones de autenticación están deshabilitadas. Contacte al administrador o revise la configuración de Firebase.",
         variant: "destructive",
-        duration: Infinity, 
+        duration: Infinity,
       });
     }
   }, [isFirebaseEnabled, authContextLoading, user, toast]);
@@ -103,7 +103,7 @@ export default function LoginPage() {
         title: "¡Bienvenido de Nuevo!",
         description: "Has iniciado sesión correctamente.",
       });
-       console.log(`[${timestamp}] LoginPage onSubmit: Email/password login SUCCESSFUL for ${data.email}. Redirection useEffect will handle next steps.`);
+       console.log(`[${timestamp}] LoginPage onSubmit: Email/password login call successful for ${data.email}. Redirection useEffect will handle next steps upon user state update.`);
     } catch (error) {
       const authError = error as AuthError;
       console.error(`[${timestamp}] LoginPage onSubmit: Login ERROR for ${data.email}: Code: ${authError.code}, Message: ${authError.message}`, authError);
@@ -139,31 +139,42 @@ export default function LoginPage() {
       });
       return;
     }
-    setIsGoogleLoading(true); 
-    console.log(`[${timestamp}] LoginPage handleGoogleSignIn: Attempting Google sign-in (redirect)... isGoogleLoading: true`);
+    setIsGoogleLoading(true);
+    console.log(`[${timestamp}] LoginPage handleGoogleSignIn: Attempting Google sign-in (POPUP)... isGoogleLoading: true`);
     try {
-      await signInWithGoogle(); // This will trigger a redirect
-      // Code execution typically stops here due to redirect. 
-      // If it continues, it's an issue or pre-redirect error.
-      console.log(`[${timestamp}] LoginPage handleGoogleSignIn: signInWithGoogle call completed (should have redirected).`);
+      await signInWithGoogle(); // This is Promise<void>; success/failure handled by onAuthStateChanged and error catching
+      // If signInWithGoogle resolves, the popup process itself didn't throw an immediate error.
+      // The useEffect hook watching 'user' and 'authContextLoading' will handle redirection upon state change.
+      console.log(`[${timestamp}] LoginPage handleGoogleSignIn: signInWithGoogle (POPUP) call completed. Waiting for user state change from onAuthStateChanged.`);
+      // A success toast here might be premature. Let redirection useEffect handle positive feedback.
     } catch (error) {
       const authError = error as AuthError;
-      console.error(`[${timestamp}] LoginPage handleGoogleSignIn: Error INITIATING Google sign-in redirect: Code: ${authError.code}, Message: ${authError.message}`, authError);
+      const errorTimestamp = new Date().toISOString();
+      console.error(`[${errorTimestamp}] LoginPage handleGoogleSignIn: Error with Google Sign-In (POPUP): Code: ${authError.code}, Message: ${authError.message}`, authError);
+      let errorMessage = "No se pudo iniciar sesión con Google. Inténtalo de nuevo.";
+      if (authError.code === 'auth/popup-closed-by-user') {
+        errorMessage = "El inicio de sesión con Google fue cancelado.";
+      } else if (authError.code === 'auth/popup-blocked') {
+        errorMessage = "El navegador bloqueó la ventana emergente de Google. Por favor, habilita las ventanas emergentes para este sitio.";
+      } else if (authError.code === 'auth/cancelled-popup-request') {
+        errorMessage = "Se canceló una solicitud de ventana emergente. Por favor, inténtalo de nuevo.";
+      } else if (authError.message?.includes("Firebase no está configurado")) {
+        errorMessage = authError.message;
+      }
       toast({
         title: "Error con Google Sign-In",
-        description: authError.message || "No se pudo iniciar el proceso de inicio de sesión con Google.",
+        description: errorMessage,
         variant: "destructive",
       });
-      setIsGoogleLoading(false); // Re-enable button IF redirect initiation FAILED
-      console.log(`[${timestamp}] LoginPage handleGoogleSignIn: Error caught, isGoogleLoading set to false.`);
+    } finally {
+      setIsGoogleLoading(false);
+      console.log(`[${new Date().toISOString()}] LoginPage handleGoogleSignIn: FINALLY block. isGoogleLoading set to false.`);
     }
-    // If signInWithGoogle succeeds, the page redirects, so setIsGoogleLoading(false) might not run here
-    // unless an error occurred before the actual redirect.
   };
-  
+
   const timestampRenderStart = new Date().toISOString();
-  if (authContextLoading && !user) { 
-    console.log(`[${timestampRenderStart}] LoginPage RENDER: AuthContext loading (combined: ${authContextLoading}), NO user. Displaying loading spinner.`);
+  if (authContextLoading && !user) {
+    console.log(`[${timestampRenderStart}] LoginPage RENDER: AuthContext loading (initial check: ${authContextLoading}), NO user. Displaying loading spinner.`);
     return (
       <div className="flex flex-col items-center justify-center h-screen">
         <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-primary"></div>
@@ -174,7 +185,7 @@ export default function LoginPage() {
     );
   }
 
-  if (!isFirebaseEnabled && !authContextLoading && !user) { 
+  if (!isFirebaseEnabled && !authContextLoading && !user) {
      console.log(`[${timestampRenderStart}] LoginPage RENDER: Firebase NOT enabled, NOT auth loading, NO user. Displaying config error card.`);
      return (
       <Card className="w-full max-w-md shadow-xl">
@@ -194,7 +205,7 @@ export default function LoginPage() {
       </Card>
      );
   }
-  
+
   console.log(`[${timestampRenderStart}] LoginPage RENDER: Rendering form. pageInteractionDisabled: ${pageInteractionDisabled} (authCtxLoading: ${authContextLoading}, emailLoading: ${isEmailPasswordLoading}, googleLoading: ${isGoogleLoading}, firebaseEnabled: ${isFirebaseEnabled}) User: ${!!user}`);
 
   return (
@@ -213,10 +224,10 @@ export default function LoginPage() {
                 <FormItem>
                   <FormLabel>Correo Electrónico</FormLabel>
                   <FormControl>
-                    <Input 
-                      type="email" 
-                      placeholder="tu@correo.com" 
-                      {...field} 
+                    <Input
+                      type="email"
+                      placeholder="tu@correo.com"
+                      {...field}
                       disabled={pageInteractionDisabled}
                     />
                   </FormControl>
@@ -232,10 +243,10 @@ export default function LoginPage() {
                   <FormLabel>Contraseña</FormLabel>
                   <FormControl>
                     <div className="relative">
-                      <Input 
-                        type={showPassword ? "text" : "password"} 
-                        placeholder="••••••••" 
-                        {...field} 
+                      <Input
+                        type={showPassword ? "text" : "password"}
+                        placeholder="••••••••"
+                        {...field}
                         disabled={pageInteractionDisabled}
                       />
                       <Button
@@ -272,13 +283,13 @@ export default function LoginPage() {
           <Separator className="flex-1" />
         </div>
 
-        <Button 
-          variant="outline" 
-          className="w-full" 
+        <Button
+          variant="outline"
+          className="w-full"
           onClick={handleGoogleSignIn}
           disabled={pageInteractionDisabled}
         >
-          {isGoogleLoading ? ( 
+          {isGoogleLoading ? (
             <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-primary mr-2"></div>
           ) : (
             <GoogleLogo className="mr-2 h-5 w-5" />
@@ -296,5 +307,3 @@ export default function LoginPage() {
     </Card>
   );
 }
-
-    
