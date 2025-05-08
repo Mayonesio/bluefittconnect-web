@@ -46,11 +46,15 @@ export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  // This useEffect handles redirecting if already logged in when page loads
+  // This useEffect handles redirecting if already logged in OR after a successful registration
+  // when user and authLoading states are updated by AuthContext.
   useEffect(() => {
     if (!authLoading && user) {
       const redirectUrl = searchParams.get("redirect") || "/";
+      console.log(`RegisterPage useEffect: User authenticated (user: ${user.email}, authLoading: ${authLoading}). Redirecting to: ${redirectUrl}`);
       router.push(redirectUrl);
+    } else {
+      console.log(`RegisterPage useEffect: Conditions not met for redirect (user: ${!!user}, authLoading: ${authLoading})`);
     }
   }, [user, authLoading, router, searchParams]);
 
@@ -85,17 +89,18 @@ export default function RegisterPage() {
       return;
     }
     setIsLoading(true);
+    console.log("RegisterPage onSubmit: Attempting registration...");
     try {
       const firebaseUser = await register(data);
       if (firebaseUser) {
+        console.log("RegisterPage onSubmit: Registration successful for user:", firebaseUser.email);
         toast({
           title: "¡Registro Exitoso!",
           description: "Tu cuenta ha sido creada. Bienvenido a Blufitt Connect.",
         });
-        const redirectUrl = searchParams.get("redirect") || "/";
-        router.push(redirectUrl); // Explicit redirect
+        // Redirection will be handled by the useEffect hook watching user and authLoading state
       } else {
-         // Fallback
+        console.log("RegisterPage onSubmit: Registration returned no user, this shouldn't happen if successful.");
         toast({
           title: "Error de Registro",
           description: "No se pudo completar el registro.",
@@ -104,6 +109,7 @@ export default function RegisterPage() {
       }
     } catch (error) {
       const authError = error as AuthError;
+      console.error("RegisterPage onSubmit: Registration error:", authError);
       let errorMessage = "Error al registrar. Por favor, inténtalo de nuevo.";
       if (authError.code === "auth/email-already-in-use") {
         errorMessage = "Este correo electrónico ya está registrado.";
@@ -134,17 +140,18 @@ export default function RegisterPage() {
       return;
     }
     setIsGoogleLoading(true);
+    console.log("RegisterPage handleGoogleSignUp: Attempting Google sign-up...");
     try {
       const firebaseUser = await signInWithGoogle(); 
       if (firebaseUser) {
+        console.log("RegisterPage handleGoogleSignUp: Google sign-up successful for user:", firebaseUser.email);
         toast({
           title: "¡Registro con Google Exitoso!",
           description: "Tu cuenta ha sido creada con Google. Bienvenido a Blufitt Connect.",
         });
-        const redirectUrl = searchParams.get("redirect") || "/";
-        router.push(redirectUrl); // Explicit redirect
+         // Redirection will be handled by the useEffect hook watching user and authLoading state
       } else {
-        // Fallback
+        console.log("RegisterPage handleGoogleSignUp: Google sign-up returned no user.");
         toast({
           title: "Error de Registro con Google",
           description: "No se pudo registrar con Google. Inténtalo de nuevo.",
@@ -153,6 +160,7 @@ export default function RegisterPage() {
       }
     } catch (error) {
       const authError = error as AuthError;
+      console.error("RegisterPage handleGoogleSignUp: Google sign-up error:", authError);
       let errorMessage = "Error al registrar con Google. Inténtalo de nuevo.";
        if (authError.code === 'auth/popup-closed-by-user') {
         errorMessage = 'Proceso de registro con Google cancelado.';
@@ -170,6 +178,7 @@ export default function RegisterPage() {
   };
 
   if (authLoading && !user) {
+    console.log("RegisterPage: Auth loading, no user. Displaying loading spinner.");
     return (
       <div className="flex flex-col items-center justify-center h-screen">
         <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-primary"></div>
@@ -181,6 +190,7 @@ export default function RegisterPage() {
   }
   
   if (!user && !isFirebaseEnabled && !authLoading) {
+     console.log("RegisterPage: Firebase not enabled, no user, not auth loading. Displaying config error.");
      return (
       <Card className="w-full max-w-md shadow-xl">
         <CardHeader className="text-center">
@@ -200,6 +210,7 @@ export default function RegisterPage() {
      );
   }
 
+  console.log(`RegisterPage render: user: ${!!user}, authLoading: ${authLoading}, isFirebaseEnabled: ${isFirebaseEnabled}`);
   return (
     <Card className="w-full max-w-md shadow-xl">
       <CardHeader className="text-center">
