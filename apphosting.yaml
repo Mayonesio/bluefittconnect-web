@@ -8,22 +8,29 @@
 # usando process.env.NEXT_PUBLIC_... para inicializar el SDK de Firebase.
 env:
   - variable: NEXT_PUBLIC_FIREBASE_API_KEY
-    value: "AIzaSyDCXy1J6Ey2dpVeWjSXHzLB82rwjb0Y9v8" # <-- Valor de tu apiKey de bluefittconnect
+    # value: "AIzaSyDCXy1J6Ey2dpVeWjSXHzLB82rwjb0Y9v8" # ELIMINA ESTA LÍNEA CON EL VALOR LITERAL
+    secret: FIREBASE_WEB_API_KEY # <-- ¡Referencia al nombre del secreto en Secret Manager! (Usa el nombre exacto que le diste)
 
   - variable: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
-    value: "bluefittconnect.firebaseapp.com" # <-- Valor de tu authDomain de bluefittconnect
+    value: "bluefittconnect.firebaseapp.com" # <-- Valor literal (no es sensible)
 
   - variable: NEXT_PUBLIC_FIREBASE_PROJECT_ID
-    value: "bluefittconnect" # <-- Valor de tu projectId de bluefittconnect
+    value: "bluefittconnect" # <-- Valor literal (no es sensible)
 
   - variable: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
-    value: "bluefittconnect.firebasestorage.app" # <-- Valor de tu storageBucket de bluefittconnect
+    value: "bluefittconnect.firebasestorage.app" # <-- Valor literal (no es sensible)
 
   - variable: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
-    value: "165765085004" # <-- Valor de tu messagingSenderId de bluefittconnect
+    value: "165765085004" # <-- Valor literal (no es sensible)
 
   - variable: NEXT_PUBLIC_FIREBASE_APP_ID
-    value: "1:165765085004:web:22520fc00552c7d5bc81e9" # <-- Valor de tu appId de bluefittconnect
+    # value: "1:165765085004:web:22520fc00552c7d5bc81e9" # ELIMINA ESTA LÍNEA CON EL VALOR LITERAL
+    secret: FIREBASE_WEB_APP_ID # <-- ¡Referencia al nombre del secreto en Secret Manager! (Usa el nombre exacto que le diste)
+
+  # Variable para Google Analytics (Measurement ID) - Generalmente no se considera secreto
+  - variable: NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID
+    value: "G-N9JW7CPDM6" # <-- Valor literal (no es sensible)
+
 
   # Si usas Google Analytics para tu app web, deberías añadir esta variable también.
   # Si no la tienes configurada o no la usas en el código, puedes dejarla comentada o quitarla.
