@@ -33,7 +33,7 @@ interface FirestoreProduct {
   category: string;
   brand?: string;
   dimensionImage?: string;
-  dimensionData?: string[]; // Changed to array of strings based on revised understanding
+  dimensionData?: Array<{ label: string; value: string }>; // Changed to array of structured maps
   images: string[];
   imagesRelated?: string[];
   price: number; // Added field
@@ -61,40 +61,55 @@ function initializeFirebaseAdmin(serviceAccountPath: string): admin.firestore.Fi
   return admin.firestore();
 }
 
+function parseDimensionData(dimensionString?: string): Array<{ label: string; value: string }> {
+  if (!dimensionString) return [];
+  // This is a simple parser assuming "Label: Value, Label2: Value2" or just comma-separated values.
+  // A more robust parser would be needed for complex structures.
+  // For "6 mm, 1/8\", 35 mm,24 mm,12 mm", we'll create generic labels for now or assume a fixed structure.
+  // Let's assume it's just a list of values for different aspects.
+  // A better JSON input would be structured. For now, we'll make them generic dimensions.
+  const parts = dimensionString.split(',').map(s => s.trim()).filter(s => s);
+  if (parts.length > 0 && parts[0].includes(':')) { // Attempt to parse "Label: Value"
+    return parts.map(part => {
+      const [label, ...valueParts] = part.split(':');
+      return { label: label.trim(), value: valueParts.join(':').trim() };
+    }).filter(p => p.label && p.value);
+  }
+  // Fallback: treat as ordered values with generic labels
+  return parts.map((part, index) => ({ label: `Dim ${index + 1}`, value: part }));
+}
+
+
 function transformProduct(jsonProduct: JsonProduct): FirestoreProduct {
   const imagesArray = jsonProduct.images
-    ? jsonProduct.images.split(',').map(img => img.trim()).filter(img => img)
+    ? jsonProduct.images.split(',').map(img => `images/productImage/${img.trim().split('/').pop()}`).filter(img => img.endsWith('/') === false && img !== 'images/productImage/')
     : [];
   const imagesRelatedArray = jsonProduct.imagerelated
-    ? jsonProduct.imagerelated.split(',').map(img => img.trim()).filter(img => img)
+    ? jsonProduct.imagerelated.split(',').map(img => `images/productImage/${img.trim().split('/').pop()}`).filter(img => img.endsWith('/') === false && img !== 'images/productImage/')
     : [];
   
-  // dimensiondata: "6 mm, 1/8\", 35 mm,24 mm,12 mm" -> ["6 mm", "1/8\"", "35 mm", "24 mm", "12 mm"]
-  // This is a simplification. For a structured map, JSON needs to be [{label: "L", value: "35mm"}, ...]
-  const dimensionDataArray = jsonProduct.dimensiondata
-    ? jsonProduct.dimensiondata.split(',').map(d => d.trim()).filter(d => d)
-    : [];
+  const dimensionDataArray = parseDimensionData(jsonProduct.dimensiondata);
 
   return {
     code: jsonProduct.code,
-    gtin13: jsonProduct.gtin13 || '', // Ensure optional fields are handled
+    gtin13: jsonProduct.gtin13 || '',
     name: jsonProduct.name,
-    title: jsonProduct.tittle || jsonProduct.name, // Use name as fallback for title
+    title: jsonProduct.tittle || jsonProduct.name,
     measure: jsonProduct.measure || '',
-    seoTitle: jsonProduct.seotittle || jsonProduct.name, // Use name as fallback
+    seoTitle: jsonProduct.seotittle || jsonProduct.name,
     description: jsonProduct.description,
-    category: jsonProduct.category.toLowerCase(), // Normalize category
+    category: jsonProduct.category.toLowerCase(),
     brand: jsonProduct.brand || '',
-    dimensionImage: jsonProduct.dimensionimage ? `images/productImage/${jsonProduct.dimensionimage.split('/').pop()}` : '', // Correct path
+    dimensionImage: jsonProduct.dimensionimage ? `images/productImage/${jsonProduct.dimensionimage.split('/').pop()}` : '',
     dimensionData: dimensionDataArray,
-    images: imagesArray.map(img => `images/productImage/${img.split('/').pop()}`), // Correct paths
-    imagesRelated: imagesRelatedArray.map(img => `images/productImage/${img.split('/').pop()}`), // Correct paths
-    price: 0, // Default price
-    stock: 0, // Default stock
-    isActive: true, // Default active state
+    images: imagesArray,
+    imagesRelated: imagesRelatedArray,
+    price: 0, 
+    stock: 0, 
+    isActive: true, 
     createdAt: admin.firestore.FieldValue.serverTimestamp(),
     updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-    aiHint: jsonProduct.category.toLowerCase(), // Simple AI hint from category
+    aiHint: jsonProduct.category.toLowerCase(), 
   };
 }
 
@@ -105,17 +120,26 @@ async function importProducts(db: admin.firestore.Firestore, productsFilePath: s
   }
 
   const productsJsonString = fs.readFileSync(productsFilePath, 'utf-8');
-  const jsonProducts: JsonProduct[] = JSON.parse(productsJsonString);
+  let jsonInput: { products: JsonProduct[] } | JsonProduct[];
+  try {
+    jsonInput = JSON.parse(productsJsonString);
+  } catch (e) {
+    console.error("Error: Could not parse products.json. Ensure it's valid JSON.", e);
+    process.exit(1);
+  }
+  
+  const jsonProducts: JsonProduct[] = Array.isArray(jsonInput) ? jsonInput : jsonInput.products;
+
 
   if (!Array.isArray(jsonProducts)) {
-    console.error('Error: Products JSON file should contain an array of products.');
+    console.error('Error: Products JSON file should contain an array of products (or an object with a "products" array).');
     process.exit(1);
   }
 
   console.log(`Found ${jsonProducts.length} products in JSON file.`);
 
   const productsCollection = db.collection('products');
-  const batchSize = 400; // Firestore batch limit is 500 operations
+  const batchSize = 400; 
   let batch = db.batch();
   let productsInBatch = 0;
   let totalProductsProcessed = 0;
@@ -131,7 +155,7 @@ async function importProducts(db: admin.firestore.Firestore, productsFilePath: s
 
     try {
       const firestoreProduct = transformProduct(jsonProduct);
-      const docRef = productsCollection.doc(firestoreProduct.code); // Use product code as document ID
+      const docRef = productsCollection.doc(firestoreProduct.code); 
       batch.set(docRef, firestoreProduct);
       productsInBatch++;
       totalProductsProcessed++;
@@ -140,7 +164,7 @@ async function importProducts(db: admin.firestore.Firestore, productsFilePath: s
         console.log(`Committing batch of ${productsInBatch} products...`);
         await batch.commit();
         successfulImports += productsInBatch;
-        batch = db.batch(); // Start a new batch
+        batch = db.batch(); 
         productsInBatch = 0;
         console.log('Batch committed successfully.');
       }
@@ -150,7 +174,6 @@ async function importProducts(db: admin.firestore.Firestore, productsFilePath: s
     }
   }
 
-  // Commit any remaining products in the last batch
   if (productsInBatch > 0) {
     console.log(`Committing final batch of ${productsInBatch} products...`);
     try {
@@ -159,7 +182,7 @@ async function importProducts(db: admin.firestore.Firestore, productsFilePath: s
       console.log('Final batch committed successfully.');
     } catch (error) {
       console.error('Error committing final batch:', error);
-      failedImports += productsInBatch; // Assume all in this failed batch did not import
+      failedImports += productsInBatch; 
     }
   }
 
@@ -174,7 +197,7 @@ async function importProducts(db: admin.firestore.Firestore, productsFilePath: s
 async function main() {
   const args = process.argv.slice(2);
   if (args.length < 2) {
-    console.error('Usage: ts-node import-products.ts <path-to-service-account-key.json> <path-to-products.json>');
+    console.error('Usage: ts-node --project tsconfig.scripts.json scripts/import-products.ts <path-to-service-account-key.json> <path-to-products.json>');
     process.exit(1);
   }
 
@@ -193,3 +216,4 @@ main().catch(error => {
   console.error('Unhandled error in main execution:', error);
   process.exit(1);
 });
+

@@ -16,3 +16,4 @@
     "src" // Exclude main app source if not needed for scripts
   ]
 }
+

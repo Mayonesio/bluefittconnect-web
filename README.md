@@ -1,17 +1,17 @@
-# Firebase Studio - Blufitt Connect
+# Firebase Studio - Bluefitt Connect
 
-This is a NextJS starter in Firebase Studio for the Blufitt Connect application.
+Este es un proyecto inicial de NextJS en Firebase Studio para la aplicación Bluefitt Connect.
 
-To get started, take a look at `src/app/page.tsx`.
+Para empezar, echa un vistazo a `src/app/page.tsx`.
 
-## Running the Application
+## Ejecutando la Aplicación
 
-1.  **Install dependencies:**
+1.  **Instalar dependencias:**
     ```bash
     npm install
     ```
-2.  **Set up Firebase Environment Variables:**
-    Ensure you have a `.env.local` file in the root of your project with your Firebase project configuration:
+2.  **Configurar Variables de Entorno de Firebase:**
+    Asegúrate de tener un archivo `.env.local` en la raíz de tu proyecto con la configuración de tu proyecto de Firebase:
     ```
     NEXT_PUBLIC_FIREBASE_API_KEY=AIza...
     NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your-project-id.firebaseapp.com
@@ -19,86 +19,86 @@ To get started, take a look at `src/app/page.tsx`.
     NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your-project-id.appspot.com
     NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your-sender-id
     NEXT_PUBLIC_FIREBASE_APP_ID=1:your-app-id
-    NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=G-your-measurement-id (optional)
+    NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=G-your-measurement-id (opcional)
     ```
-3.  **Run the development server:**
+3.  **Ejecutar el servidor de desarrollo:**
     ```bash
     npm run dev
     ```
-    The application will be available at `http://localhost:3000`.
+    La aplicación estará disponible en `http://localhost:3000`.
 
-## Importing Products into Firestore
+## Importando Productos a Firestore
 
-A script is provided to import product data from a JSON file into your Cloud Firestore `products` collection.
+Se proporciona un script para importar datos de productos desde un archivo JSON a tu colección `products` en Cloud Firestore.
 
-**Prerequisites:**
+**Prerrequisitos:**
 
-1.  **Firebase Admin SDK Setup:**
-    *   The script uses `firebase-admin` which should be listed in `devDependencies` in your `package.json`. If not, install it:
+1.  **Configuración del SDK de Administrador de Firebase:**
+    *   El script utiliza `firebase-admin`, que debe estar listado en `devDependencies` en tu `package.json` raíz. Si no es así, instálalo:
         ```bash
         npm install --save-dev firebase-admin
         ```
-    *   You need a **service account key JSON file** for your Firebase project.
-        *   Go to your Firebase Project Settings in the Firebase Console.
-        *   Navigate to the "Service accounts" tab.
-        *   Click on "Generate new private key" and download the JSON file.
-        *   **Important:** Keep this file secure and do not commit it to your repository. Place it in a safe location accessible by the script.
+    *   Necesitas un **archivo JSON de clave de cuenta de servicio** para tu proyecto de Firebase.
+        *   Ve a la Configuración de tu Proyecto de Firebase en la Consola de Firebase.
+        *   Navega a la pestaña "Cuentas de servicio".
+        *   Haz clic en "Generar nueva clave privada" y descarga el archivo JSON.
+        *   **Importante:** Mantén este archivo seguro y no lo subas a tu repositorio. Colócalo en una ubicación segura accesible por el script.
 
-2.  **Product Data JSON File:**
-    *   Prepare your product data in a JSON file (e.g., `products.json`). The structure should be an array of product objects. See `scripts/products.sample.json` for an example of the expected format for each product from your source JSON.
-    *   The script assumes keys like `code`, `name`, `category`, `images` (as a comma-separated string), etc. It will transform these into the Firestore data model.
-    *   Place this JSON file in a known location, for example, inside the `scripts` directory.
+2.  **Archivo JSON de Datos de Productos:**
+    *   Prepara tus datos de productos en un archivo JSON (ej. `products.json`). La estructura debe ser un array de objetos de producto o un objeto con una clave "products" que contenga el array. Consulta `scripts/products.sample.json` para ver un ejemplo del formato esperado.
+    *   El script transformará las claves del JSON (`code`, `name`, `category`, `images` como cadena separada por comas, etc.) al modelo de datos de Firestore.
+    *   Coloca este archivo JSON en una ubicación conocida, por ejemplo, dentro del directorio `scripts` o en cualquier otra parte accesible por el script.
 
-3.  **Install `ts-node` (if not already installed globally or as a dev dependency):**
-    `ts-node` is used to execute TypeScript files directly. It's already included in the project's `devDependencies`.
+3.  **Instalar `ts-node` (si no está ya instalado globalmente o como dev dependency en la raíz):**
+    `ts-node` se utiliza para ejecutar archivos TypeScript directamente. Ya está incluido en los `devDependencies` del proyecto raíz.
 
-**Running the Import Script:**
+**Ejecutando el Script de Importación (desde la raíz del proyecto):**
 
-1.  **Open your terminal** in the root directory of the project.
-2.  **Execute the script** using the following command, replacing the placeholders with the actual paths to your files:
+1.  **Abre tu terminal** en el directorio raíz del proyecto.
+2.  **Ejecuta el script** utilizando el siguiente comando, reemplazando los marcadores de posición con las rutas reales a tus archivos:
 
     ```bash
-    npm run import-products -- <path/to/your-serviceAccountKey.json> <path/to/your-products.json>
+    npm run import-products -- <ruta/a/tu-serviceAccountKey.json> <ruta/a/tu-products.json>
     ```
-    Or, if you prefer to call `ts-node` directly:
+    O, si prefieres llamar a `ts-node` directamente:
     ```bash
-    npx ts-node --project tsconfig.scripts.json scripts/import-products.ts <path/to/your-serviceAccountKey.json> <path/to/your-products.json>
+    npx ts-node --project tsconfig.scripts.json scripts/import-products.ts <ruta/a/tu-serviceAccountKey.json> <ruta/a/tu-products.json>
     ```
 
-    **Example:**
-    If your service account key is at `~/Downloads/my-service-account.json` and your products data is at `scripts/my_full_catalog.json`:
+    **Ejemplo:**
+    Si tu clave de cuenta de servicio está en `~/Downloads/my-service-account.json` y tus datos de productos están en `scripts/my_full_catalog.json`:
     ```bash
     npm run import-products -- ~/Downloads/my-service-account.json scripts/my_full_catalog.json
     ```
 
-    **Explanation of Command Parts:**
-    *   `npm run import-products --`: Uses the npm script defined in `package.json`. The `--` ensures subsequent arguments are passed to the script itself, not to npm.
-    *   `npx ts-node`: Executes `ts-node`.
-    *   `--project tsconfig.scripts.json`: Tells `ts-node` to use the specific TypeScript configuration for scripts.
-    *   `scripts/import-products.ts`: The path to the import script.
-    *   `<path/to/your-serviceAccountKey.json>`: The **absolute or relative path** to your downloaded Firebase service account key JSON file.
-    *   `<path/to/your-products.json>`: The **absolute or relative path** to your JSON file containing the product data.
+    **Explicación de las Partes del Comando:**
+    *   `npm run import-products --`: Utiliza el script npm definido en el `package.json` raíz. El `--` asegura que los argumentos subsiguientes se pasen al script mismo, no a npm.
+    *   `npx ts-node`: Ejecuta `ts-node` usando la versión en `node_modules` del proyecto raíz.
+    *   `--project tsconfig.scripts.json`: Le dice a `ts-node` que use la configuración específica de TypeScript para scripts (ubicada en la raíz del proyecto).
+    *   `scripts/import-products.ts`: La ruta al script de importación, relativa a la raíz del proyecto.
+    *   `<ruta/a/tu-serviceAccountKey.json>`: La **ruta absoluta o relativa** a tu archivo JSON de clave de cuenta de servicio de Firebase descargado.
+    *   `<ruta/a/tu-products.json>`: La **ruta absoluta o relativa** a tu archivo JSON que contiene los datos de los productos.
 
-3.  **Monitor the Output:**
-    The script will print progress messages to the console, including:
-    *   Initialization status.
-    *   The number of products found in your JSON file.
-    *   Progress of batch commits to Firestore.
-    *   Any errors encountered while processing specific products.
-    *   A final summary of imported and failed products.
+3.  **Supervisar la Salida:**
+    El script imprimirá mensajes de progreso en la consola, incluyendo:
+    *   Estado de inicialización.
+    *   El número de productos encontrados en tu archivo JSON.
+    *   Progreso de las confirmaciones por lotes (batch commits) a Firestore.
+    *   Cualquier error encontrado al procesar productos específicos.
+    *   Un resumen final de productos importados y fallidos.
 
-**Important Notes for the Import Script:**
+**Notas Importantes para el Script de Importación:**
 
-*   **Document IDs:** The script uses the `code` field from your JSON as the document ID for each product in Firestore. Ensure product codes are unique to avoid overwriting documents.
-*   **Data Transformation:**
-    *   Fields like `images`, `imagesRelated` (if present as comma-separated strings in JSON) are converted to arrays of strings.
-    *   The `dimensiondata` field from your JSON (e.g., `"6 mm, 1/8\", 35 mm,24 mm,12 mm"`) will be split by commas and stored as an array of strings (e.g., `["6 mm", "1/8\"", "35 mm", "24 mm", "12 mm"]`). For a more structured `dimensionData` (like an array of maps: `[{label: "Length", value: "10cm"}, ...]`), your source JSON would need to be structured accordingly. The script currently implements the simpler string array transformation.
-    *   Paths for `dimensionImage`, `images`, `imagesRelated` will be prefixed with `images/productImage/` to match your `public` directory structure, assuming the JSON contains only the filenames (e.g., `codotab.png`).
-    *   `isActive` is set to `true` by default.
-    *   `price` and `stock` are set to `0` by default.
-    *   `createdAt` and `updatedAt` are set using Firestore server timestamps.
-*   **Batch Writes:** The script uses Firestore batch writes (default batch size of 400) for efficiency. This helps in importing large datasets without hitting rate limits as easily.
-*   **Error Handling:** The script includes basic error handling. If a product fails to process, it will be logged, and the script will attempt to continue with the next products.
-*   **Idempotency:** If you run the script multiple times with the same `products.json`, it will overwrite existing documents in Firestore if they have the same `code` (document ID).
+*   **IDs de Documento:** El script utiliza el campo `code` de tu JSON como el ID de documento para cada producto en Firestore. Asegúrate de que los códigos de producto sean únicos para evitar sobrescribir documentos.
+*   **Transformación de Datos:**
+    *   Campos como `images`, `imagesRelated` (si están presentes como cadenas separadas por comas en el JSON) se convierten a arrays de cadenas, con rutas prefijadas `images/productImage/`.
+    *   El campo `dimensiondata` de tu JSON se parsea intentando una estructura `[{label: string, value: string}]` si detecta el formato "Label: Value", o como un array de valores con etiquetas genéricas. Para datos de dimensión más estructurados y consistentes, es mejor que el JSON fuente ya los tenga como un array de objetos.
+    *   Las rutas para `dimensionImage`, `images`, `imagesRelated` serán prefijadas con `images/productImage/` para coincidir con la estructura de tu directorio `public`, asumiendo que el JSON contiene solo los nombres de archivo (ej. `codotab.png`).
+    *   `isActive` se establece a `true` por defecto.
+    *   `price` y `stock` se establecen a `0` por defecto.
+    *   `createdAt` y `updatedAt` se establecen utilizando los timestamps del servidor de Firestore.
+*   **Escrituras por Lotes (Batch Writes):** El script utiliza escrituras por lotes de Firestore (tamaño de lote predeterminado de 400) para mayor eficiencia.
+*   **Manejo de Errores:** El script incluye manejo básico de errores. Si un producto no se procesa correctamente, se registrará y el script intentará continuar.
+*   **Idempotencia:** Si ejecutas el script varias veces con el mismo `products.json`, sobrescribirá los documentos existentes en Firestore si tienen el mismo `code` (ID de documento).
 
-After running the script, verify the data in your Firebase Console (Firestore Database section) to ensure the products have been imported correctly.
+Después de ejecutar el script, verifica los datos en tu Consola de Firebase (sección Firestore Database) para asegurarte de que los productos se han importado correctamente.
