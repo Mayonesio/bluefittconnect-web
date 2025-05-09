@@ -29,29 +29,31 @@ const DEFAULT_PRODUCT_THUMB_PATH = '/images/productImage/placeholder-thumb.png';
 const sampleProductos: Product[] = [
   { 
     id: '1', 
-    code: 'VB-PVC-001',
-    gtin13: '8401234567890',
-    name: 'Válvula de Bola PVC', 
-    title: 'Válvula de Bola PVC Azul con Maneta Roja - PN16',
-    category: 'Válvula', 
-    brand: 'Bluefitt Basics',
-    measure: 'DN25',
-    seoTitle: 'Válvula Esfera PVC DN25 PN16 para Riego y Fontanería',
-    description: 'Válvula de bola de PVC resistente para control de fluidos en sistemas de riego y fontanería. Cierre rápido y seguro.', 
-    dimensionImage: '/images/productImage/VB-PVC-001-dimensions.png',
+    code: 'bfchc001',
+    gtin13: '8436586060015',
+    name: 'Codo Rosca Macho Corto 6 x 1/8"', 
+    title: 'CODO ROSCA MACHO CORTO',
+    category: 'codo corto', 
+    brand: 'Bluefitt International',
+    measure: '6 x 1/8"',
+    seoTitle: 'CODO ROSCA MACHO CORTO 6 x 1/8" · COMANDO HIDRÁULICO · POLIAMIDA REFORZADA - BLUEFITT - INSTALACIONES HIDRÁULICAS Y MONTAJES DE RIEGO',
+    description: 'Codo para sistemas hidráulicos, excelente para instalaciones agrícolas en interior, exterior y aplicaciones de campo hidráulico.', 
+    dimensionImage: '/images/productImage/codotab.png',
     dimensionData: [
-      { label: 'Presión Nominal', value: '16 bar' },
-      { label: 'Material Cuerpo', value: 'PVC-U' },
-      { label: 'Conexión', value: 'Encolar Hembra' }
+      { label: 'Diámetro Tubo', value: '6 mm' },
+      { label: 'Rosca', value: '1/8"' },
+      { label: 'Longitud Total', value: '35 mm' },
+      { label: 'Longitud Rosca', value: '24 mm' },
+      { label: 'Longitud Espiga', value: '12 mm' }
     ],
-    images: ['/images/productImage/VB-PVC-001.png', '/images/productImage/VB-PVC-001-alt.png'],
-    imagesRelated: ['/images/productImage/RAC-LAT-QR-002.png'], // Example: related to product with code RAC-LAT-QR-002
-    price: 1599, // in cents
-    stock: 150,
+    images: ['/images/productImage/ch001c.png', '/images/productImage/codocottab.png', '/images/productImage/recomend.png', '/images/productImage/tuerca.png'],
+    imagesRelated: ['/images/productImage/ch001c+b.png'],
+    price: 1599, // Placeholder, update with actual price if available
+    stock: 150,  // Placeholder
     isActive: true,
     createdAt: Timestamp.now(),
     updatedAt: Timestamp.now(),
-    aiHint: 'valve plastic' 
+    aiHint: 'fitting plastic pipe' 
   },
   { 
     id: '2', 
@@ -145,6 +147,7 @@ const categoriesList: { value: string, label: string }[] = [
     { value: 'Válvula', label: 'Válvulas' },
     { value: 'Racor', label: 'Racores' },
     { value: 'Caudalímetro', label: 'Caudalímetros' },
+    { value: 'codo corto', label: 'Codos Cortos'} // Added category from JSON
 ];
 
 type ViewMode = 'grid' | 'list';
@@ -189,19 +192,25 @@ function ProductosContent() {
 
   const filteredProductos = useMemo(() => {
     return sampleProductos.filter(producto => {
-      const matchesSearch = producto.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                            producto.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                            (producto.title && producto.title.toLowerCase().includes(searchTerm.toLowerCase()));
+      const nameMatch = producto.name.toLowerCase().includes(searchTerm.toLowerCase());
+      const descriptionMatch = producto.description.toLowerCase().includes(searchTerm.toLowerCase());
+      const titleMatch = producto.title ? producto.title.toLowerCase().includes(searchTerm.toLowerCase()) : false;
+      const codeMatch = producto.code.toLowerCase().includes(searchTerm.toLowerCase());
+      const brandMatch = producto.brand ? producto.brand.toLowerCase().includes(searchTerm.toLowerCase()) : false;
+
+      const matchesSearch = nameMatch || descriptionMatch || titleMatch || codeMatch || brandMatch;
+      
       const productCategoryLower = producto.category.toLowerCase();
       const matchesCategory = selectedCategories.length === 0 || selectedCategories.some(sc => productCategoryLower === sc);
-      return matchesSearch && matchesCategory;
+      return matchesSearch && matchesCategory && producto.isActive;
     });
   }, [searchTerm, selectedCategories]);
 
   const getCategoryIcon = (category: string) => {
-    if (category.toLowerCase() === 'válvula') return <SlidersHorizontal className="h-4 w-4 mr-1.5 text-muted-foreground" />;
-    if (category.toLowerCase() === 'racor') return <Puzzle className="h-4 w-4 mr-1.5 text-muted-foreground" />;
-    if (category.toLowerCase() === 'caudalímetro') return <Gauge className="h-4 w-4 mr-1.5 text-muted-foreground" />;
+    const catLower = category.toLowerCase();
+    if (catLower === 'válvula') return <SlidersHorizontal className="h-4 w-4 mr-1.5 text-muted-foreground" />;
+    if (catLower === 'racor' || catLower === 'codo corto') return <Puzzle className="h-4 w-4 mr-1.5 text-muted-foreground" />;
+    if (catLower === 'caudalímetro') return <Gauge className="h-4 w-4 mr-1.5 text-muted-foreground" />;
     return null;
   }
 
@@ -282,6 +291,12 @@ function ProductosContent() {
                         sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
                         className="object-cover transition-transform duration-300 group-hover:scale-105"
                         data-ai-hint={producto.aiHint || producto.category.toLowerCase()}
+                        onError={(e) => {
+                            // @ts-ignore
+                            e.target.srcset = DEFAULT_PRODUCT_IMAGE_PATH; // Fallback for next/image
+                            // @ts-ignore
+                            e.target.src = DEFAULT_PRODUCT_IMAGE_PATH; // Fallback for regular img
+                          }}
                       />
                        <div className="absolute top-2 right-2 bg-background/80 backdrop-blur-sm px-2 py-1 rounded-md text-xs flex items-center shadow">
                           {getCategoryIcon(producto.category)}
@@ -330,6 +345,12 @@ function ProductosContent() {
                           height={64} 
                           className="rounded-md object-cover aspect-square"
                           data-ai-hint={producto.aiHint || producto.category.toLowerCase()}
+                           onError={(e) => {
+                            // @ts-ignore
+                            e.target.srcset = DEFAULT_PRODUCT_THUMB_PATH;
+                            // @ts-ignore
+                            e.target.src = DEFAULT_PRODUCT_THUMB_PATH;
+                          }}
                         />
                       </TableCell>
                       <TableCell className="font-medium">{producto.name}</TableCell>
