@@ -30,6 +30,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { useToast } from "@/hooks/use-toast";
 import Breadcrumb from '@/components/layout/breadcrumb'; 
 import { ThemeToggle } from '@/components/layout/theme-toggle';
+import { Suspense } from 'react'; // Import Suspense
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -77,10 +78,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
           <SidebarHeader className="p-4 flex items-center justify-center group-data-[state=expanded]:justify-start border-b border-sidebar-border">
             <Link href="/" className="flex items-center gap-2 group-data-[state=collapsed]:hidden">
               <Logo className="h-8 w-auto text-sidebar-primary" height={32} width={110} /> 
-              {/* Removed: <span className="font-semibold text-lg">Bluefitt Connect</span> */}
             </Link>
              <Link href="/" className="hidden items-center gap-2 group-data-[state=collapsed]:flex">
-              <Logo className="h-8 w-8 text-sidebar-primary" height={32} width={32}/>
+              <Logo className="h-8 w-8 text-sidebar-primary" height={32} width={32} />
             </Link>
           </SidebarHeader>
           <SidebarContent className="p-2">
@@ -107,7 +107,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
               <SidebarTrigger />
             </div>
             <div className="flex-1">
-              <Breadcrumb /> 
+              <Suspense fallback={<div className="h-5 w-32 animate-pulse bg-muted rounded-md"></div>}>
+                <Breadcrumb /> 
+              </Suspense>
             </div>
             <div className="flex items-center gap-4">
               <ThemeToggle />
@@ -125,6 +127,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-56">
                     <DropdownMenuLabel>{user.email || "Mi Cuenta"}</DropdownMenuLabel>
+                    {user.displayName && <DropdownMenuLabel className="text-xs text-muted-foreground -mt-2 font-normal">{user.displayName}</DropdownMenuLabel>}
                     <DropdownMenuSeparator />
                     <DropdownMenuItem asChild>
                       <Link href="/settings?tab=profile">

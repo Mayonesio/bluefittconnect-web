@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import Image from 'next/image';
 import Link from 'next/link';
-import { PlusCircle, Search, Filter, SlidersHorizontal, Puzzle, Gauge, LayoutGrid, List } from 'lucide-react';
+import { PlusCircle, Search, Filter, SlidersHorizontal, Puzzle, Gauge, LayoutGrid, List, AlertTriangle } from 'lucide-react';
 import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
@@ -20,135 +20,21 @@ import React, { useState, useMemo, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useAuth } from "@/contexts/auth-context";
 import { cn } from "@/lib/utils";
-import type { Product } from '@/types/product'; 
-import { Timestamp } from "firebase/firestore";
+// import type { Product } from '@/types/product'; // Type is used by the hook
+// import { Timestamp } from "firebase/firestore"; // Not needed directly here
+import { useProducts } from "@/hooks/use-products"; // Import the hook
 
 const DEFAULT_PRODUCT_IMAGE_PATH = '/images/productImage/placeholder.png';
 const DEFAULT_PRODUCT_THUMB_PATH = '/images/productImage/placeholder-thumb.png';
 
-
-const sampleProductos: Product[] = [
-  { 
-    id: 'bfchc001', // Using code as ID for uniqueness in sample
-    code: 'bfchc001',
-    gtin13: '8436586060015',
-    name: 'Codo Rosca Macho Corto 6 x 1/8"', 
-    title: 'CODO ROSCA MACHO CORTO',
-    category: 'codo corto', 
-    brand: 'Bluefitt International',
-    measure: '6 x 1/8"',
-    seoTitle: 'CODO ROSCA MACHO CORTO 6 x 1/8" · COMANDO HIDRÁULICO · POLIAMIDA REFORZADA - BLUEFITT - INSTALACIONES HIDRÁULICAS Y MONTAJES DE RIEGO',
-    description: 'Codo para sistemas hidráulicos, excelente para instalaciones agrícolas en interior, exterior y aplicaciones de campo hidráulico. Fabricado en poliamida reforzada con fibra de vidrio para una mayor durabilidad y resistencia a la presión y agentes químicos. Diseño optimizado para facilitar el montaje y asegurar una conexión estanca.', 
-    dimensionImage: '/images/productImage/codotab.png',
-    dimensionData: [
-      { label: 'Diámetro Tubo', value: '6 mm' },
-      { label: 'Rosca', value: '1/8"' },
-      { label: 'Longitud Total', value: '35 mm' },
-      { label: 'Longitud Rosca', value: '24 mm' },
-      { label: 'Longitud Espiga', value: '12 mm' }
-    ],
-    images: ['/images/productImage/ch001c.png', '/images/productImage/codocottab.png', '/images/productImage/recomend.png', '/images/productImage/tuerca.png'],
-    imagesRelated: ['/images/productImage/ch001c+b.png'],
-    price: 1599, 
-    stock: 150,  
-    isActive: true,
-    createdAt: Timestamp.now(),
-    updatedAt: Timestamp.now(),
-    aiHint: 'fitting plastic pipe' 
-  },
-  { 
-    id: 'RAC-LAT-QR-002', 
-    code: 'RAC-LAT-QR-002',
-    name: 'Racor Enlace Rápido Latón', 
-    title: 'Racor de Conexión Rápida en Latón Macho 1/2"',
-    category: 'Racor', 
-    brand: 'Bluefitt Pro',
-    measure: '1/2" Macho',
-    description: 'Racor de enlace rápido fabricado en latón para conexiones seguras y duraderas en mangueras y tuberías. Ideal para aplicaciones que requieren conexiones y desconexiones frecuentes. Alta resistencia a la corrosión.', 
-    images: ['/images/productImage/RAC-LAT-QR-002.png', '/images/productImage/placeholder.png'], // Added placeholder for gallery demo
-    price: 550,
-    stock: 300,
-    isActive: true,
-    createdAt: Timestamp.now(),
-    updatedAt: Timestamp.now(),
-    aiHint: 'fitting brass'
-  },
-  { 
-    id: 'CAU-DIG-DN50-003', 
-    code: 'CAU-DIG-DN50-003',
-    name: 'Caudalímetro Digital DN50', 
-    title: 'Caudalímetro Digital Electromagnético DN50 con Display LCD',
-    category: 'Caudalímetro', 
-    brand: 'Bluefitt Tech',
-    measure: 'DN50',
-    description: 'Caudalímetro digital de alta precisión para tuberías DN50, ideal para monitorización de consumo de agua en agricultura de precisión. Display LCD de fácil lectura y batería de larga duración.', 
-    dimensionData: [{ label: 'Presión Máxima', value: '10 bar' }, {label: 'Alimentación', value: 'Batería Litio'}],
-    images: ['/images/productImage/CAU-DIG-DN50-003.png'],
-    price: 12000,
-    stock: 25,
-    isActive: true,
-    createdAt: Timestamp.now(),
-    updatedAt: Timestamp.now(),
-    aiHint: 'flow meter'
-  },
-  { 
-    id: 'VM-HF-DN100-004', 
-    code: 'VM-HF-DN100-004',
-    name: 'Válvula Mariposa Hierro Fundido', 
-    title: 'Válvula de Mariposa con Palanca Hierro Fundido DN100',
-    category: 'Válvula', 
-    brand: 'Bluefitt Industrial',
-    measure: 'DN100',
-    description: 'Válvula de mariposa robusta para grandes caudales, cuerpo de hierro fundido y disco inoxidable. Perfecta para control de flujo en sistemas de riego principales y distribución de agua.', 
-    dimensionData: [{ label: 'Presión Nominal', value: '10 bar' }, {label: 'Material Cuerpo', value: 'Hierro Fundido GG25'}],
-    images: ['/images/productImage/VM-HF-DN100-004.png'],
-    price: 7500,
-    stock: 50,
-    isActive: true,
-    createdAt: Timestamp.now(),
-    updatedAt: Timestamp.now(),
-    aiHint: 'valve industrial'
-  },
-  { 
-    id: 'CODO-PP-90-005', 
-    code: 'CODO-PP-90-005',
-    name: 'Codo 90º Polipropileno', 
-    title: 'Codo de 90 Grados en Polipropileno para Riego',
-    category: 'Racor', 
-    brand: 'Bluefitt Garden',
-    measure: '25mm',
-    description: 'Codo de 90 grados en polipropileno (PP) para sistemas de riego por goteo y microaspersión. Resistente a UV y fertilizantes comunes.', 
-    images: ['/images/productImage/CODO-PP-90-005.png'],
-    price: 230,
-    stock: 500,
-    isActive: true,
-    createdAt: Timestamp.now(),
-    updatedAt: Timestamp.now(),
-    aiHint: 'pipe fitting'
-  },
-  { 
-    id: 'CAU-ULT-PORT-006', 
-    code: 'CAU-ULT-PORT-006',
-    name: 'Caudalímetro Ultrasónico Portátil', 
-    title: 'Medidor de Caudal Ultrasónico Portátil Clamp-On',
-    category: 'Caudalímetro', 
-    brand: 'Bluefitt Advanced',
-    description: 'Medidor de caudal ultrasónico portátil no invasivo (clamp-on) para diversas aplicaciones y diámetros de tubería. Fácil de usar para auditorías de consumo y verificaciones de caudal.', 
-    images: ['/images/productImage/CAU-ULT-PORT-006.png'],
-    price: 35000,
-    stock: 10,
-    isActive: true,
-    createdAt: Timestamp.now(),
-    updatedAt: Timestamp.now(),
-    aiHint: 'meter portable'
-  },
-];
+// sampleProductos array is removed as data will come from the hook
 
 const categoriesList: { value: string, label: string }[] = [
     { value: 'Válvula', label: 'Válvulas' },
     { value: 'Racor', label: 'Racores' },
     { value: 'Caudalímetro', label: 'Caudalímetros' },
     { value: 'codo corto', label: 'Codos Cortos'} 
+    // Consider fetching categories from Firestore or a config file if they are dynamic
 ];
 
 type ViewMode = 'grid' | 'list';
@@ -156,20 +42,38 @@ type ViewMode = 'grid' | 'list';
 function ProductosContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { user, loading } = useAuth(); 
+  const { user, loading: authLoading } = useAuth(); 
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
 
+  // Handle initial category filter from URL params
+  const initialCategoryQuery = searchParams.get('categoria');
   useEffect(() => {
-    const initialCategory = searchParams.get('categoria');
-    if (initialCategory && categoriesList.some(c => c.value.toLowerCase() === initialCategory.toLowerCase())) {
-      setSelectedCategories([initialCategory.toLowerCase()]);
-    } else if (initialCategory === null && searchParams.toString() === '') {
-       setSelectedCategories([]);
+    if (initialCategoryQuery) {
+      const categoriesFromQuery = initialCategoryQuery.toLowerCase().split(',');
+      const validCategories = categoriesFromQuery.filter(cat => 
+        categoriesList.some(c => c.value.toLowerCase() === cat)
+      );
+      if (validCategories.length > 0 && validCategories.join(',') !== selectedCategories.join(',')) {
+        setSelectedCategories(validCategories);
+      }
+    } else if (selectedCategories.length > 0 && !initialCategoryQuery) {
+      // Clear categories if URL param is removed
+      setSelectedCategories([]);
     }
-  }, [searchParams]); 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialCategoryQuery]);
+  
+  // Fetch products using the hook. The hook itself can handle one primary category filter if needed,
+  // or client-side filtering for multiple categories. For simplicity, we'll let the hook fetch based on one
+  // if one is dominant, or all, and then apply client-side filtering.
+  // For now, useProducts doesn't take a filter, we will filter client-side.
+  // Let's modify useProducts to accept a single primary category from URL if present,
+  // then filter further client-side if multiple selectedCategories exist.
+  const primaryCategoryFilter = selectedCategories.length === 1 ? selectedCategories[0] : undefined;
+  const { products: allFetchedProducts, loading: productsLoading, error: productsError } = useProducts(primaryCategoryFilter);
 
   const handleCategoryChange = (categoryValue: string) => {
     const categoryKey = categoryValue.toLowerCase();
@@ -180,7 +84,7 @@ function ProductosContent() {
     } else {
       newSelectedCategories = [...selectedCategories, categoryKey];
     }
-    setSelectedCategories(newSelectedCategories);
+    // setSelectedCategories(newSelectedCategories); // This will be set by useEffect on query change
 
     const newParams = new URLSearchParams(searchParams.toString()); 
     if (newSelectedCategories.length > 0) { 
@@ -192,7 +96,7 @@ function ProductosContent() {
   };
 
   const filteredProductos = useMemo(() => {
-    return sampleProductos.filter(producto => {
+    return allFetchedProducts.filter(producto => {
       const nameMatch = producto.name.toLowerCase().includes(searchTerm.toLowerCase());
       const descriptionMatch = producto.description.toLowerCase().includes(searchTerm.toLowerCase());
       const titleMatch = producto.title ? producto.title.toLowerCase().includes(searchTerm.toLowerCase()) : false;
@@ -203,9 +107,9 @@ function ProductosContent() {
       
       const productCategoryLower = producto.category.toLowerCase();
       const matchesCategory = selectedCategories.length === 0 || selectedCategories.some(sc => productCategoryLower === sc);
-      return matchesSearch && matchesCategory && producto.isActive;
+      return matchesSearch && matchesCategory; // isActive is handled by the hook's query now
     });
-  }, [searchTerm, selectedCategories]);
+  }, [searchTerm, selectedCategories, allFetchedProducts]);
 
   const getCategoryIcon = (category: string) => {
     const catLower = category.toLowerCase();
@@ -220,6 +124,28 @@ function ProductosContent() {
     return `${(priceInCents / 100).toFixed(2)}€`;
   };
 
+  if (productsLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[calc(100vh-12rem)]">
+        <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-primary"></div>
+        <p className="mt-4 text-muted-foreground">Cargando productos...</p>
+      </div>
+    );
+  }
+
+  if (productsError) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[calc(100vh-12rem)] text-center">
+        <AlertTriangle className="h-16 w-16 text-destructive mb-4" />
+        <h2 className="text-2xl font-semibold text-destructive mb-2">Error al Cargar Productos</h2>
+        <p className="text-muted-foreground mb-6">
+          {productsError.message || "No se pudieron cargar los productos. Inténtelo de nuevo más tarde."}
+        </p>
+        <Button onClick={() => router.refresh()} variant="outline">Reintentar</Button>
+      </div>
+    );
+  }
+
   return (
      <div className="flex flex-col gap-8">
       <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -229,8 +155,8 @@ function ProductosContent() {
             Explore nuestra selección de válvulas, racores y caudalímetros.
           </p>
         </div>
-        <Button disabled={!user || loading} title={!user ? "Debe iniciar sesión para añadir productos" : ""}>
-          <PlusCircle className="mr-2 h-4 w-4" /> Añadir Nuevo Producto
+        <Button disabled={!user || authLoading} title={!user ? "Debe iniciar sesión para añadir productos" : ""}>
+          <PlusCircle className="mr-2 h-4 w-4" /> Añadir Nuevo Producto (Próximamente)
         </Button>
       </header>
 
@@ -252,6 +178,7 @@ function ProductosContent() {
                 <Button variant="outline" className="flex items-center gap-2">
                   <Filter className="h-4 w-4" />
                   Filtrar por Categoría
+                  {selectedCategories.length > 0 && <span className="ml-1.5 rounded-full bg-primary px-2 py-0.5 text-xs text-primary-foreground">{selectedCategories.length}</span>}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-[200px]">
@@ -283,14 +210,14 @@ function ProductosContent() {
             viewMode === 'grid' ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {filteredProductos.map((producto) => (
-                  <Card key={producto.id} className="overflow-hidden flex flex-col group">
-                    <Link href={`/productos/${producto.id}`} className="block relative w-full h-48">
+                  <Card key={producto.id} className="overflow-hidden flex flex-col group relative"> {/* Added relative for badge */}
+                    <Link href={`/productos/${producto.id}`} className="block relative w-full h-48 bg-muted">
                       <Image
                         src={producto.images[0] || DEFAULT_PRODUCT_IMAGE_PATH} 
                         alt={producto.name}
                         fill
                         sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                        className="object-cover transition-transform duration-300 group-hover:scale-105"
+                        className="object-contain transition-transform duration-300 group-hover:scale-105" // Changed object-cover to object-contain
                         data-ai-hint={producto.aiHint || producto.category.toLowerCase()}
                         onError={(e) => {
                             const target = e.target as HTMLImageElement;
@@ -307,7 +234,7 @@ function ProductosContent() {
                       <Link href={`/productos/${producto.id}`}>
                         <CardTitle className="text-lg font-semibold leading-tight line-clamp-2 hover:text-primary transition-colors">{producto.name}</CardTitle>
                       </Link>
-                      <CardDescription className="text-xs text-muted-foreground">
+                      <CardDescription className="text-xs text-muted-foreground line-clamp-1">
                          {producto.measure && `Medida: ${producto.measure}`}
                          {producto.measure && producto.brand && ' • '}
                          {producto.brand && `Marca: ${producto.brand}`}
@@ -342,13 +269,13 @@ function ProductosContent() {
                   {filteredProductos.map((producto) => (
                     <TableRow key={producto.id}>
                       <TableCell>
-                        <Link href={`/productos/${producto.id}`}>
+                        <Link href={`/productos/${producto.id}`} className="block w-16 h-16 bg-muted rounded-md overflow-hidden">
                           <Image 
                             src={producto.images[0] || DEFAULT_PRODUCT_THUMB_PATH} 
                             alt={producto.name} 
                             width={64} 
                             height={64} 
-                            className="rounded-md object-cover aspect-square"
+                            className="object-contain w-full h-full" // Changed object-cover
                             data-ai-hint={producto.aiHint || producto.category.toLowerCase()}
                             onError={(e) => {
                                 const target = e.target as HTMLImageElement;
@@ -362,6 +289,7 @@ function ProductosContent() {
                         <Link href={`/productos/${producto.id}`} className="hover:text-primary transition-colors">
                           {producto.name}
                         </Link>
+                        <p className="text-xs text-muted-foreground md:hidden">{producto.brand} {producto.measure}</p>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center">
@@ -397,10 +325,11 @@ function ProductosContent() {
 
 export default function ProductosPage() {
   return (
+    // Suspense for useSearchParams and client-side navigation
     <Suspense fallback={
       <div className="flex flex-col items-center justify-center h-[calc(100vh-8rem)]">
         <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-primary"></div>
-        <p className="mt-4 text-muted-foreground">Cargando productos...</p>
+        <p className="mt-4 text-muted-foreground">Cargando página de productos...</p>
       </div>
     }>
       <ProductosContent />

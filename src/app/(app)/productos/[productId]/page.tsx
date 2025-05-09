@@ -5,7 +5,7 @@ import { useEffect, useState, Suspense } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowLeft, ShoppingCart, Package, Info, Image as ImageIcon, Maximize2, CheckCircle, XCircle, MinusCircle, Thermometer, Scaling, Ruler } from "lucide-react";
+import { ArrowLeft, ShoppingCart, Package, Info, Image as ImageIcon, Maximize2, CheckCircle, XCircle, MinusCircle, Thermometer, Scaling, Ruler, AlertTriangle, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -14,76 +14,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
-import type { Product, ProductDimensionDataItem } from '@/types/product';
-import { Timestamp } from "firebase/firestore"; // Assuming sampleProductos might use it or for future Firestore integration.
+// import type { Product } from '@/types/product'; // Type is used by the hook
+// import { Timestamp } from "firebase/firestore"; // Not needed directly here
+import { useProductById } from "@/hooks/use-product-by-id"; // Import the hook
 
-// Re-using sampleProductos from the main productos page for now.
-// In a real app, this data would be fetched from Firestore based on productId.
-const sampleProductos: Product[] = [
-  { 
-    id: 'bfchc001', 
-    code: 'bfchc001',
-    gtin13: '8436586060015',
-    name: 'Codo Rosca Macho Corto 6 x 1/8"', 
-    title: 'CODO ROSCA MACHO CORTO',
-    category: 'codo corto', 
-    brand: 'Bluefitt International',
-    measure: '6 x 1/8"',
-    seoTitle: 'CODO ROSCA MACHO CORTO 6 x 1/8" · COMANDO HIDRÁULICO · POLIAMIDA REFORZADA - BLUEFITT - INSTALACIONES HIDRÁULICAS Y MONTAJES DE RIEGO',
-    description: 'Codo para sistemas hidráulicos, excelente para instalaciones agrícolas en interior, exterior y aplicaciones de campo hidráulico. Fabricado en poliamida reforzada con fibra de vidrio para una mayor durabilidad y resistencia a la presión y agentes químicos. Diseño optimizado para facilitar el montaje y asegurar una conexión estanca.', 
-    dimensionImage: '/images/productImage/codotab.png',
-    dimensionData: [
-      { label: 'Diámetro Tubo', value: '6 mm' },
-      { label: 'Rosca', value: '1/8"' },
-      { label: 'Longitud Total', value: '35 mm' },
-      { label: 'Longitud Rosca', value: '24 mm' },
-      { label: 'Longitud Espiga', value: '12 mm' }
-    ],
-    images: ['/images/productImage/ch001c.png', '/images/productImage/codocottab.png', '/images/productImage/recomend.png', '/images/productImage/tuerca.png'],
-    imagesRelated: ['/images/productImage/ch001c+b.png'],
-    price: 1599, 
-    stock: 150,  
-    isActive: true,
-    createdAt: Timestamp.now(),
-    updatedAt: Timestamp.now(),
-    aiHint: 'fitting plastic pipe' 
-  },
-  { 
-    id: 'RAC-LAT-QR-002', 
-    code: 'RAC-LAT-QR-002',
-    name: 'Racor Enlace Rápido Latón', 
-    title: 'Racor de Conexión Rápida en Latón Macho 1/2"',
-    category: 'Racor', 
-    brand: 'Bluefitt Pro',
-    measure: '1/2" Macho',
-    description: 'Racor de enlace rápido fabricado en latón para conexiones seguras y duraderas en mangueras y tuberías. Ideal para aplicaciones que requieren conexiones y desconexiones frecuentes. Alta resistencia a la corrosión.', 
-    images: ['/images/productImage/RAC-LAT-QR-002.png', '/images/productImage/placeholder.png'],
-    price: 550,
-    stock: 0, // Example for out of stock
-    isActive: true,
-    createdAt: Timestamp.now(),
-    updatedAt: Timestamp.now(),
-    aiHint: 'fitting brass'
-  },
-   { 
-    id: 'CAU-DIG-DN50-003', 
-    code: 'CAU-DIG-DN50-003',
-    name: 'Caudalímetro Digital DN50', 
-    title: 'Caudalímetro Digital Electromagnético DN50 con Display LCD',
-    category: 'Caudalímetro', 
-    brand: 'Bluefitt Tech',
-    measure: 'DN50',
-    description: 'Caudalímetro digital de alta precisión para tuberías DN50, ideal para monitorización de consumo de agua en agricultura de precisión. Display LCD de fácil lectura y batería de larga duración.', 
-    dimensionData: [{ label: 'Presión Máxima', value: '10 bar' }, {label: 'Alimentación', value: 'Batería Litio'}],
-    images: ['/images/productImage/CAU-DIG-DN50-003.png'],
-    price: 12000,
-    stock: 25,
-    isActive: true,
-    createdAt: Timestamp.now(),
-    updatedAt: Timestamp.now(),
-    aiHint: 'flow meter'
-  },
-];
+// sampleProductos array is removed
+
 const DEFAULT_PRODUCT_IMAGE_PATH = '/images/productImage/placeholder.png';
 
 function ProductDetailPageContent() {
@@ -91,23 +27,19 @@ function ProductDetailPageContent() {
   const router = useRouter();
   const productId = params.productId as string;
 
-  const [product, setProduct] = useState<Product | null | undefined>(undefined); // undefined for loading state
+  const { product, loading, error } = useProductById(productId);
   const [selectedImage, setSelectedImage] = useState<string>('');
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
 
   useEffect(() => {
-    if (productId) {
-      const foundProduct = sampleProductos.find(p => p.id === productId);
-      setProduct(foundProduct || null);
-      if (foundProduct && foundProduct.images.length > 0) {
-        setSelectedImage(foundProduct.images[0]);
-      } else if (foundProduct) {
-        setSelectedImage(DEFAULT_PRODUCT_IMAGE_PATH);
-      }
+    if (product && product.images && product.images.length > 0) {
+      setSelectedImage(product.images[0]);
+    } else if (product) { // Product exists but has no images
+      setSelectedImage(DEFAULT_PRODUCT_IMAGE_PATH);
     }
-  }, [productId]);
+  }, [product]);
 
-  if (product === undefined) {
+  if (loading || product === undefined) { // product === undefined also indicates initial loading from hook
     return (
       <div className="flex flex-col items-center justify-center h-[calc(100vh-8rem)]">
         <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-primary"></div>
@@ -116,14 +48,29 @@ function ProductDetailPageContent() {
     );
   }
 
-  if (!product) {
+  if (error) {
     return (
       <div className="flex flex-col items-center justify-center h-[calc(100vh-8rem)] text-center">
-        <Package className="h-20 w-20 text-destructive mb-4" />
+        <AlertTriangle className="h-20 w-20 text-destructive mb-4" />
+        <h1 className="text-3xl font-bold mb-2 text-destructive">Error al Cargar el Producto</h1>
+        <p className="text-muted-foreground mb-6">
+          {error.message || "No se pudo cargar la información del producto. Por favor, intente de nuevo."}
+        </p>
+        <Button onClick={() => router.push('/productos')}>
+          <ArrowLeft className="mr-2 h-4 w-4" /> Volver al Catálogo
+        </Button>
+      </div>
+    );
+  }
+  
+  if (!product) { // product is null, meaning not found after loading and no error
+    return (
+      <div className="flex flex-col items-center justify-center h-[calc(100vh-8rem)] text-center">
+        <Package className="h-20 w-20 text-muted-foreground mb-4" />
         <h1 className="text-3xl font-bold mb-2">Producto No Encontrado</h1>
         <p className="text-muted-foreground mb-6">
           No pudimos encontrar el producto que estás buscando.
-        </p>
+        </p>        
         <Button onClick={() => router.push('/productos')}>
           <ArrowLeft className="mr-2 h-4 w-4" /> Volver al Catálogo
         </Button>
@@ -146,13 +93,13 @@ function ProductDetailPageContent() {
   const getDimensionIcon = (label: string) => {
     const lowerLabel = label.toLowerCase();
     if (lowerLabel.includes('temperatura') || lowerLabel.includes('calor')) return <Thermometer className="h-4 w-4 mr-2 text-muted-foreground" />;
-    if (lowerLabel.includes('presión') || lowerLabel.includes('bar')) return <Scaling className="h-4 w-4 mr-2 text-muted-foreground" />; // Using Scaling for pressure
+    if (lowerLabel.includes('presión') || lowerLabel.includes('bar')) return <Scaling className="h-4 w-4 mr-2 text-muted-foreground" />; 
     if (lowerLabel.includes('longitud') || lowerLabel.includes('diámetro') || lowerLabel.includes('medida') || lowerLabel.includes('tamaño') || lowerLabel.includes('rosca') || lowerLabel.includes('espiga')) return <Ruler className="h-4 w-4 mr-2 text-muted-foreground" />;
     return <Info className="h-4 w-4 mr-2 text-muted-foreground" />;
   };
 
   const openLightbox = (imageSrc: string) => {
-    setSelectedImage(imageSrc); // Ensure the lightbox opens with the clicked image
+    setSelectedImage(imageSrc); 
     setIsLightboxOpen(true);
   };
 
@@ -168,11 +115,11 @@ function ProductDetailPageContent() {
         {/* Image Gallery */}
         <div className="space-y-4">
           <div 
-            className="relative aspect-square w-full overflow-hidden rounded-lg shadow-lg cursor-pointer group"
-            onClick={() => openLightbox(selectedImage)}
+            className="relative aspect-square w-full overflow-hidden rounded-lg shadow-lg cursor-pointer group bg-muted" // Added bg-muted
+            onClick={() => openLightbox(selectedImage || DEFAULT_PRODUCT_IMAGE_PATH)}
           >
             <Image
-              src={selectedImage}
+              src={selectedImage || DEFAULT_PRODUCT_IMAGE_PATH}
               alt={`Imagen principal de ${product.name}`}
               fill
               sizes="(max-width: 768px) 100vw, 50vw"
@@ -194,7 +141,7 @@ function ProductDetailPageContent() {
                 <button
                   key={index}
                   className={cn(
-                    "relative aspect-square rounded-md overflow-hidden border-2 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2",
+                    "relative aspect-square rounded-md overflow-hidden border-2 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 bg-muted", // Added bg-muted
                     selectedImage === img ? "border-primary" : "border-transparent hover:border-muted-foreground/50"
                   )}
                   onClick={() => setSelectedImage(img)}
@@ -204,7 +151,7 @@ function ProductDetailPageContent() {
                     alt={`Miniatura ${index + 1} de ${product.name}`}
                     fill
                     sizes="10vw"
-                    className="object-cover"
+                    className="object-contain" // Changed object-cover to object-contain
                     onError={(e) => {
                         const target = e.target as HTMLImageElement;
                         target.srcset = DEFAULT_PRODUCT_IMAGE_PATH;
@@ -242,6 +189,11 @@ function ProductDetailPageContent() {
               <span className="font-medium text-foreground">Medida/Tamaño:</span> {product.measure}
             </div>
           )}
+           {product.code && (
+            <div className="text-sm text-muted-foreground">
+              <span className="font-medium text-foreground">Código:</span> {product.code}
+            </div>
+          )}
           
           <Separator />
 
@@ -259,7 +211,7 @@ function ProductDetailPageContent() {
       
       <Tabs defaultValue="dimensions" className="mt-12">
         <TabsList className="grid w-full grid-cols-2 md:w-auto md:inline-flex">
-          <TabsTrigger value="dimensions" disabled={!product.dimensionData && !product.dimensionImage}>
+          <TabsTrigger value="dimensions" disabled={(!product.dimensionData || product.dimensionData.length === 0) && !product.dimensionImage}>
             Dimensiones y Especificaciones
           </TabsTrigger>
           <TabsTrigger value="related" disabled={!product.imagesRelated || product.imagesRelated.length === 0}>
@@ -299,7 +251,7 @@ function ProductDetailPageContent() {
               {product.dimensionImage && (
                 <div className="mt-6">
                   <h3 className="text-lg font-semibold mb-2 text-foreground">Esquema de Dimensiones</h3>
-                  <div className="relative aspect-video w-full max-w-md mx-auto border rounded-md overflow-hidden shadow">
+                  <div className="relative aspect-video w-full max-w-md mx-auto border rounded-md overflow-hidden shadow bg-muted">
                     <Image 
                       src={product.dimensionImage} 
                       alt={`Esquema de dimensiones de ${product.name}`}
@@ -309,13 +261,20 @@ function ProductDetailPageContent() {
                       data-ai-hint="technical drawing blueprint"
                       onError={(e) => {
                         const target = e.target as HTMLImageElement;
-                        target.style.display = 'none'; // Hide broken image
+                        target.style.display = 'none'; 
+                        const parent = target.parentElement;
+                        if (parent) {
+                          const placeholder = document.createElement('div');
+                          placeholder.className = "w-full h-full flex items-center justify-center text-muted-foreground text-sm";
+                          placeholder.innerText = "Imagen no disponible";
+                          parent.appendChild(placeholder);
+                        }
                       }}
                     />
                   </div>
                 </div>
               )}
-              {!product.dimensionData && !product.dimensionImage && (
+              {(!product.dimensionData || product.dimensionData.length === 0) && !product.dimensionImage && (
                  <p className="text-muted-foreground">No hay datos de dimensiones o especificaciones disponibles para este producto.</p>
               )}
             </CardContent>
@@ -333,7 +292,7 @@ function ProductDetailPageContent() {
                   {product.imagesRelated.map((img, index) => (
                     <div 
                         key={index} 
-                        className="relative aspect-square rounded-md overflow-hidden border shadow-sm group cursor-pointer"
+                        className="relative aspect-square rounded-md overflow-hidden border shadow-sm group cursor-pointer bg-muted"
                         onClick={() => openLightbox(img)}
                     >
                       <Image
@@ -341,7 +300,7 @@ function ProductDetailPageContent() {
                         alt={`Imagen relacionada ${index + 1} de ${product.name}`}
                         fill
                         sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                        className="object-cover transition-transform duration-300 group-hover:scale-105"
+                        className="object-contain transition-transform duration-300 group-hover:scale-105" // Changed object-cover
                         data-ai-hint="product application"
                          onError={(e) => {
                             const target = e.target as HTMLImageElement;
@@ -368,10 +327,10 @@ function ProductDetailPageContent() {
           className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
           onClick={() => setIsLightboxOpen(false)}
         >
-          <Card className="relative max-w-3xl max-h-[90vh] w-full overflow-hidden shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <CardContent className="p-2 aspect-video relative">
+          <Card className="relative max-w-3xl max-h-[90vh] w-full overflow-hidden shadow-2xl bg-background" onClick={(e) => e.stopPropagation()}> {/* Added bg-background */}
+            <CardContent className="p-2 aspect-video relative bg-muted rounded-md"> {/* Added bg-muted */}
                <Image
-                src={selectedImage}
+                src={selectedImage || DEFAULT_PRODUCT_IMAGE_PATH}
                 alt={`Vista ampliada de ${product.name}`}
                 fill
                 className="object-contain"
@@ -400,6 +359,7 @@ function ProductDetailPageContent() {
 
 export default function ProductPage() {
   return (
+    // Suspense for useProductById hook and client-side navigation elements.
     <Suspense fallback={
       <div className="flex flex-col items-center justify-center h-[calc(100vh-8rem)]">
         <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-primary"></div>
