@@ -1,26 +1,28 @@
-import type { SVGProps } from 'react';
+// src/components/icons/logo.tsx
+import Image from 'next/image';
+import type { HTMLAttributes } from 'react'; // Changed from SVGProps as Image isn't an SVG
 
-export function Logo(props: SVGProps<SVGSVGElement>) {
-  const styleContent = `
-          .bluefitt-text {
-            font-family: 'Impact', 'Arial Black', sans-serif;
-            font-size: 36px; 
-            font-weight: bold;
-            letter-spacing: -0.5px; 
-          }
-        `;
+// The props for Next/Image are different from SVG, so we'll accept general HTMLAttributes
+// and spread them, but the specific SVG ones might not apply directly.
+// The 'className' prop is common and will be useful for styling.
+interface LogoProps extends Omit<HTMLAttributes<HTMLImageElement>, 'width' | 'height' | 'src' | 'alt'> {
+  // Explicitly define width and height as they are required for next/image
+  // or allow them to be passed if desired, though we'll default them.
+  width?: number;
+  height?: number;
+  className?: string;
+}
+
+export function Logo({ width = 120, height = 30, className, ...props }: LogoProps) {
   return (
-    <svg
-      viewBox="0 0 220 50" 
-      xmlns="http://www.w3.org/2000/svg"
-      aria-label="Logotipo de Bluefitt Connect"
-      {...props}
-    >
-      <style dangerouslySetInnerHTML={{ __html: styleContent }} />
-      <text x="5" y="38" className="bluefitt-text">
-        <tspan fill="#00AEEF">BLUE</tspan>
-        <tspan fill="#003366">FITT</tspan>
-      </text>
-    </svg>
+    <Image
+      src="/images/logo.png" // Path to your logo in the public/images directory
+      alt="Bluefitt Connect Logo"
+      width={width} 
+      height={height}
+      className={className} // Pass through className for styling
+      priority // Optional: if the logo is LCP, consider adding priority
+      {...props} // Spread any other HTML attributes
+    />
   );
 }

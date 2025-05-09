@@ -76,11 +76,11 @@ export default function AppLayout({ children }: AppLayoutProps) {
         <Sidebar collapsible="icon" className="border-r bg-sidebar text-sidebar-foreground">
           <SidebarHeader className="p-4 flex items-center justify-center group-data-[state=expanded]:justify-between border-b border-sidebar-border">
             <Link href="/" className="flex items-center gap-2 group-data-[state=collapsed]:hidden">
-              <Logo className="h-8 w-auto text-sidebar-primary" />
+              <Logo className="h-8 w-auto text-sidebar-primary" height={32} width={110} /> 
               <span className="font-semibold text-lg">Bluefitt Connect</span>
             </Link>
              <Link href="/" className="hidden items-center gap-2 group-data-[state=collapsed]:flex">
-              <Logo className="h-8 w-8 text-sidebar-primary" />
+              <Logo className="h-8 w-8 text-sidebar-primary" height={32} width={32}/>
             </Link>
           </SidebarHeader>
           <SidebarContent className="p-2">
