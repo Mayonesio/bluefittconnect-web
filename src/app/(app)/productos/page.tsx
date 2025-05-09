@@ -19,8 +19,11 @@ import React, { useState, useMemo, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useAuth } from "@/contexts/auth-context";
 import { cn } from "@/lib/utils";
-import type { Product, ProductDimensionDataItem } from '@/types/product'; // Import the new Product interface
+import type { Product } from '@/types/product'; 
 import { Timestamp } from "firebase/firestore";
+
+const DEFAULT_PRODUCT_IMAGE_PATH = '/images/productImage/placeholder.png';
+const DEFAULT_PRODUCT_THUMB_PATH = '/images/productImage/placeholder-thumb.png';
 
 
 const sampleProductos: Product[] = [
@@ -35,14 +38,14 @@ const sampleProductos: Product[] = [
     measure: 'DN25',
     seoTitle: 'Válvula Esfera PVC DN25 PN16 para Riego y Fontanería',
     description: 'Válvula de bola de PVC resistente para control de fluidos en sistemas de riego y fontanería. Cierre rápido y seguro.', 
-    dimensionImage: 'https://picsum.photos/seed/valvula-bola-dims/200/150',
+    dimensionImage: '/images/productImage/VB-PVC-001-dimensions.png',
     dimensionData: [
       { label: 'Presión Nominal', value: '16 bar' },
       { label: 'Material Cuerpo', value: 'PVC-U' },
       { label: 'Conexión', value: 'Encolar Hembra' }
     ],
-    images: ['https://picsum.photos/seed/valvula-bola/400/300', 'https://picsum.photos/seed/valvula-bola-alt/400/300'],
-    imagesRelated: ['https://picsum.photos/seed/racor-pvc/100/100'],
+    images: ['/images/productImage/VB-PVC-001.png', '/images/productImage/VB-PVC-001-alt.png'],
+    imagesRelated: ['/images/productImage/RAC-LAT-QR-002.png'], // Example: related to product with code RAC-LAT-QR-002
     price: 1599, // in cents
     stock: 150,
     isActive: true,
@@ -59,7 +62,7 @@ const sampleProductos: Product[] = [
     brand: 'Bluefitt Pro',
     measure: '1/2" Macho',
     description: 'Racor de enlace rápido fabricado en latón para conexiones seguras y duraderas en mangueras y tuberías.', 
-    images: ['https://picsum.photos/seed/racor-laton/400/300'],
+    images: ['/images/productImage/RAC-LAT-QR-002.png'],
     price: 550,
     stock: 300,
     isActive: true,
@@ -77,7 +80,7 @@ const sampleProductos: Product[] = [
     measure: 'DN50',
     description: 'Caudalímetro digital de alta precisión para tuberías DN50, ideal para monitorización de consumo de agua.', 
     dimensionData: [{ label: 'Presión Máxima', value: '10 bar' }, {label: 'Alimentación', value: 'Batería Litio'}],
-    images: ['https://picsum.photos/seed/caudalimetro-digital/400/300'],
+    images: ['/images/productImage/CAU-DIG-DN50-003.png'],
     price: 12000,
     stock: 25,
     isActive: true,
@@ -95,7 +98,7 @@ const sampleProductos: Product[] = [
     measure: 'DN100',
     description: 'Válvula de mariposa robusta para grandes caudales, cuerpo de hierro fundido y disco inoxidable.', 
     dimensionData: [{ label: 'Presión Nominal', value: '10 bar' }, {label: 'Material Cuerpo', value: 'Hierro Fundido GG25'}],
-    images: ['https://picsum.photos/seed/valvula-mariposa/400/300'],
+    images: ['/images/productImage/VM-HF-DN100-004.png'],
     price: 7500,
     stock: 50,
     isActive: true,
@@ -112,7 +115,7 @@ const sampleProductos: Product[] = [
     brand: 'Bluefitt Garden',
     measure: '25mm',
     description: 'Codo de 90 grados en polipropileno (PP) para sistemas de riego por goteo y microaspersión.', 
-    images: ['https://picsum.photos/seed/codo-pp/400/300'],
+    images: ['/images/productImage/CODO-PP-90-005.png'],
     price: 230,
     stock: 500,
     isActive: true,
@@ -128,7 +131,7 @@ const sampleProductos: Product[] = [
     category: 'Caudalímetro', 
     brand: 'Bluefitt Advanced',
     description: 'Medidor de caudal ultrasónico portátil no invasivo (clamp-on) para diversas aplicaciones y diámetros de tubería.', 
-    images: ['https://picsum.photos/seed/caudalimetro-ultrasonico/400/300'],
+    images: ['/images/productImage/CAU-ULT-PORT-006.png'],
     price: 35000,
     stock: 10,
     isActive: true,
@@ -138,7 +141,6 @@ const sampleProductos: Product[] = [
   },
 ];
 
-// Define categories based on Product['category'] which is now string
 const categoriesList: { value: string, label: string }[] = [
     { value: 'Válvula', label: 'Válvulas' },
     { value: 'Racor', label: 'Racores' },
@@ -177,8 +179,8 @@ function ProductosContent() {
     setSelectedCategories(newSelectedCategories);
 
     const newParams = new URLSearchParams(searchParams.toString()); 
-    if (newSelectedCategories.length > 0) { // Simplified: always set if any selected, or delete
-       newParams.set('categoria', newSelectedCategories.join(',')); // Could join for multiple, or handle single
+    if (newSelectedCategories.length > 0) { 
+       newParams.set('categoria', newSelectedCategories.join(',')); 
     } else { 
       newParams.delete('categoria');
     }
@@ -274,7 +276,7 @@ function ProductosContent() {
                   <Card key={producto.id} className="overflow-hidden flex flex-col group">
                     <div className="relative w-full h-48">
                       <Image
-                        src={producto.images[0] || 'https://picsum.photos/400/300'} // Fallback image
+                        src={producto.images[0] || DEFAULT_PRODUCT_IMAGE_PATH} 
                         alt={producto.name}
                         fill
                         sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
@@ -322,7 +324,7 @@ function ProductosContent() {
                     <TableRow key={producto.id}>
                       <TableCell>
                         <Image 
-                          src={producto.images[0] || 'https://picsum.photos/64/64'} // Fallback image
+                          src={producto.images[0] || DEFAULT_PRODUCT_THUMB_PATH} 
                           alt={producto.name} 
                           width={64} 
                           height={64} 
@@ -373,3 +375,4 @@ export default function ProductosPage() {
     </Suspense>
   );
 }
+
