@@ -15,7 +15,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
   useEffect(() => {
     // This effect runs only on the client after hydration
     if (resolvedTheme) {
-      setLogoSrc(resolvedTheme === 'light' ? '/images/Logo-big.png' : '/images/logo.png');
+      setLogoSrc(resolvedTheme === 'light' ? '/images/logo-big.png' : '/images/logo.png');
     }
   }, [resolvedTheme]);
 
@@ -28,3 +28,4 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
     </div>
   );
 }
+
