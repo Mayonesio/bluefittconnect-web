@@ -8,7 +8,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
     <div className="flex min-h-screen flex-col items-center justify-center bg-muted/40 p-4">
        <Link href="/" className="mb-8 flex items-center gap-2 text-primary">
         <Logo className="h-10 w-auto" height={40} width={146}/>
-        <span className="text-2xl font-semibold text-foreground">Bluefitt Connect</span>
+        {/* Removed: <span className="text-2xl font-semibold text-foreground">Bluefitt Connect</span> */}
       </Link>
       {children}
     </div>
