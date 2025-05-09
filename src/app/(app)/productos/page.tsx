@@ -19,29 +19,127 @@ import React, { useState, useMemo, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useAuth } from "@/contexts/auth-context";
 import { cn } from "@/lib/utils";
+import type { Product, ProductDimensionDataItem } from '@/types/product'; // Import the new Product interface
+import { Timestamp } from "firebase/firestore";
 
-interface Producto {
-  id: string;
-  nombre: string;
-  categoria: 'Válvula' | 'Racor' | 'Caudalímetro';
-  material?: string;
-  presionMaxima?: string;
-  imageUrl: string;
-  descripcion: string;
-  aiHint: string;
-  precio?: string;
-}
 
-const sampleProductos: Producto[] = [
-  { id: '1', nombre: 'Válvula de Bola PVC', categoria: 'Válvula', material: 'PVC', presionMaxima: '16 bar', imageUrl: 'https://picsum.photos/seed/valvula-bola/400/300', descripcion: 'Válvula de bola de PVC resistente para control de fluidos.', aiHint: 'valve plastic', precio: '15.99€' },
-  { id: '2', nombre: 'Racor Enlace Rápido Latón', categoria: 'Racor', material: 'Latón', imageUrl: 'https://picsum.photos/seed/racor-laton/400/300', descripcion: 'Racor de enlace rápido fabricado en latón para conexiones seguras.', aiHint: 'fitting brass', precio: '5.50€' },
-  { id: '3', nombre: 'Caudalímetro Digital DN50', categoria: 'Caudalímetro', presionMaxima: '10 bar', imageUrl: 'https://picsum.photos/seed/caudalimetro-digital/400/300', descripcion: 'Caudalímetro digital de alta precisión para tuberías DN50.', aiHint: 'flow meter', precio: '120.00€' },
-  { id: '4', nombre: 'Válvula Mariposa Hierro Fundido', categoria: 'Válvula', material: 'Hierro Fundido', presionMaxima: '10 bar', imageUrl: 'https://picsum.photos/seed/valvula-mariposa/400/300', descripcion: 'Válvula de mariposa robusta para grandes caudales.', aiHint: 'valve industrial', precio: '75.00€' },
-  { id: '5', nombre: 'Codo 90º Polipropileno', categoria: 'Racor', material: 'Polipropileno', imageUrl: 'https://picsum.photos/seed/codo-pp/400/300', descripcion: 'Codo de 90 grados en polipropileno para sistemas de riego.', aiHint: 'pipe fitting', precio: '2.30€' },
-  { id: '6', nombre: 'Caudalímetro Ultrasónico Portátil', categoria: 'Caudalímetro', imageUrl: 'https://picsum.photos/seed/caudalimetro-ultrasonico/400/300', descripcion: 'Medidor de caudal ultrasónico portátil para diversas aplicaciones.', aiHint: 'meter portable', precio: '350.00€' },
+const sampleProductos: Product[] = [
+  { 
+    id: '1', 
+    code: 'VB-PVC-001',
+    gtin13: '8401234567890',
+    name: 'Válvula de Bola PVC', 
+    title: 'Válvula de Bola PVC Azul con Maneta Roja - PN16',
+    category: 'Válvula', 
+    brand: 'Bluefitt Basics',
+    measure: 'DN25',
+    seoTitle: 'Válvula Esfera PVC DN25 PN16 para Riego y Fontanería',
+    description: 'Válvula de bola de PVC resistente para control de fluidos en sistemas de riego y fontanería. Cierre rápido y seguro.', 
+    dimensionImage: 'https://picsum.photos/seed/valvula-bola-dims/200/150',
+    dimensionData: [
+      { label: 'Presión Nominal', value: '16 bar' },
+      { label: 'Material Cuerpo', value: 'PVC-U' },
+      { label: 'Conexión', value: 'Encolar Hembra' }
+    ],
+    images: ['https://picsum.photos/seed/valvula-bola/400/300', 'https://picsum.photos/seed/valvula-bola-alt/400/300'],
+    imagesRelated: ['https://picsum.photos/seed/racor-pvc/100/100'],
+    price: 1599, // in cents
+    stock: 150,
+    isActive: true,
+    createdAt: Timestamp.now(),
+    updatedAt: Timestamp.now(),
+    aiHint: 'valve plastic' 
+  },
+  { 
+    id: '2', 
+    code: 'RAC-LAT-QR-002',
+    name: 'Racor Enlace Rápido Latón', 
+    title: 'Racor de Conexión Rápida en Latón Macho 1/2"',
+    category: 'Racor', 
+    brand: 'Bluefitt Pro',
+    measure: '1/2" Macho',
+    description: 'Racor de enlace rápido fabricado en latón para conexiones seguras y duraderas en mangueras y tuberías.', 
+    images: ['https://picsum.photos/seed/racor-laton/400/300'],
+    price: 550,
+    stock: 300,
+    isActive: true,
+    createdAt: Timestamp.now(),
+    updatedAt: Timestamp.now(),
+    aiHint: 'fitting brass'
+  },
+  { 
+    id: '3', 
+    code: 'CAU-DIG-DN50-003',
+    name: 'Caudalímetro Digital DN50', 
+    title: 'Caudalímetro Digital Electromagnético DN50 con Display LCD',
+    category: 'Caudalímetro', 
+    brand: 'Bluefitt Tech',
+    measure: 'DN50',
+    description: 'Caudalímetro digital de alta precisión para tuberías DN50, ideal para monitorización de consumo de agua.', 
+    dimensionData: [{ label: 'Presión Máxima', value: '10 bar' }, {label: 'Alimentación', value: 'Batería Litio'}],
+    images: ['https://picsum.photos/seed/caudalimetro-digital/400/300'],
+    price: 12000,
+    stock: 25,
+    isActive: true,
+    createdAt: Timestamp.now(),
+    updatedAt: Timestamp.now(),
+    aiHint: 'flow meter'
+  },
+  { 
+    id: '4', 
+    code: 'VM-HF-DN100-004',
+    name: 'Válvula Mariposa Hierro Fundido', 
+    title: 'Válvula de Mariposa con Palanca Hierro Fundido DN100',
+    category: 'Válvula', 
+    brand: 'Bluefitt Industrial',
+    measure: 'DN100',
+    description: 'Válvula de mariposa robusta para grandes caudales, cuerpo de hierro fundido y disco inoxidable.', 
+    dimensionData: [{ label: 'Presión Nominal', value: '10 bar' }, {label: 'Material Cuerpo', value: 'Hierro Fundido GG25'}],
+    images: ['https://picsum.photos/seed/valvula-mariposa/400/300'],
+    price: 7500,
+    stock: 50,
+    isActive: true,
+    createdAt: Timestamp.now(),
+    updatedAt: Timestamp.now(),
+    aiHint: 'valve industrial'
+  },
+  { 
+    id: '5', 
+    code: 'CODO-PP-90-005',
+    name: 'Codo 90º Polipropileno', 
+    title: 'Codo de 90 Grados en Polipropileno para Riego',
+    category: 'Racor', 
+    brand: 'Bluefitt Garden',
+    measure: '25mm',
+    description: 'Codo de 90 grados en polipropileno (PP) para sistemas de riego por goteo y microaspersión.', 
+    images: ['https://picsum.photos/seed/codo-pp/400/300'],
+    price: 230,
+    stock: 500,
+    isActive: true,
+    createdAt: Timestamp.now(),
+    updatedAt: Timestamp.now(),
+    aiHint: 'pipe fitting'
+  },
+  { 
+    id: '6', 
+    code: 'CAU-ULT-PORT-006',
+    name: 'Caudalímetro Ultrasónico Portátil', 
+    title: 'Medidor de Caudal Ultrasónico Portátil Clamp-On',
+    category: 'Caudalímetro', 
+    brand: 'Bluefitt Advanced',
+    description: 'Medidor de caudal ultrasónico portátil no invasivo (clamp-on) para diversas aplicaciones y diámetros de tubería.', 
+    images: ['https://picsum.photos/seed/caudalimetro-ultrasonico/400/300'],
+    price: 35000,
+    stock: 10,
+    isActive: true,
+    createdAt: Timestamp.now(),
+    updatedAt: Timestamp.now(),
+    aiHint: 'meter portable'
+  },
 ];
 
-const categoriesList: { value: Producto['categoria'], label: string }[] = [
+// Define categories based on Product['category'] which is now string
+const categoriesList: { value: string, label: string }[] = [
     { value: 'Válvula', label: 'Válvulas' },
     { value: 'Racor', label: 'Racores' },
     { value: 'Caudalímetro', label: 'Caudalímetros' },
@@ -60,7 +158,7 @@ function ProductosContent() {
 
   useEffect(() => {
     const initialCategory = searchParams.get('categoria');
-    if (initialCategory && categoriesList.some(c => c.value.toLowerCase() === initialCategory)) {
+    if (initialCategory && categoriesList.some(c => c.value.toLowerCase() === initialCategory.toLowerCase())) {
       setSelectedCategories([initialCategory.toLowerCase()]);
     } else if (initialCategory === null && searchParams.toString() === '') {
        setSelectedCategories([]);
@@ -79,10 +177,8 @@ function ProductosContent() {
     setSelectedCategories(newSelectedCategories);
 
     const newParams = new URLSearchParams(searchParams.toString()); 
-    if (newSelectedCategories.length === 1) {
-       newParams.set('categoria', newSelectedCategories[0]);
-    } else if (newSelectedCategories.length > 1) {
-       newParams.delete('categoria');
+    if (newSelectedCategories.length > 0) { // Simplified: always set if any selected, or delete
+       newParams.set('categoria', newSelectedCategories.join(',')); // Could join for multiple, or handle single
     } else { 
       newParams.delete('categoria');
     }
@@ -91,20 +187,26 @@ function ProductosContent() {
 
   const filteredProductos = useMemo(() => {
     return sampleProductos.filter(producto => {
-      const matchesSearch = producto.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                            producto.descripcion.toLowerCase().includes(searchTerm.toLowerCase());
-      const productCategoryLower = producto.categoria.toLowerCase();
-      const matchesCategory = selectedCategories.length === 0 || selectedCategories.includes(productCategoryLower);
+      const matchesSearch = producto.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                            producto.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                            (producto.title && producto.title.toLowerCase().includes(searchTerm.toLowerCase()));
+      const productCategoryLower = producto.category.toLowerCase();
+      const matchesCategory = selectedCategories.length === 0 || selectedCategories.some(sc => productCategoryLower === sc);
       return matchesSearch && matchesCategory;
     });
   }, [searchTerm, selectedCategories]);
 
-  const getCategoryIcon = (category: Producto['categoria']) => {
-    if (category === 'Válvula') return <SlidersHorizontal className="h-4 w-4 mr-1.5 text-muted-foreground" />;
-    if (category === 'Racor') return <Puzzle className="h-4 w-4 mr-1.5 text-muted-foreground" />;
-    if (category === 'Caudalímetro') return <Gauge className="h-4 w-4 mr-1.5 text-muted-foreground" />;
+  const getCategoryIcon = (category: string) => {
+    if (category.toLowerCase() === 'válvula') return <SlidersHorizontal className="h-4 w-4 mr-1.5 text-muted-foreground" />;
+    if (category.toLowerCase() === 'racor') return <Puzzle className="h-4 w-4 mr-1.5 text-muted-foreground" />;
+    if (category.toLowerCase() === 'caudalímetro') return <Gauge className="h-4 w-4 mr-1.5 text-muted-foreground" />;
     return null;
   }
+
+  const formatPrice = (priceInCents?: number) => {
+    if (priceInCents === undefined) return 'N/A';
+    return `${(priceInCents / 100).toFixed(2)}€`;
+  };
 
   return (
      <div className="flex flex-col gap-8">
@@ -172,29 +274,29 @@ function ProductosContent() {
                   <Card key={producto.id} className="overflow-hidden flex flex-col group">
                     <div className="relative w-full h-48">
                       <Image
-                        src={producto.imageUrl}
-                        alt={producto.nombre}
+                        src={producto.images[0] || 'https://picsum.photos/400/300'} // Fallback image
+                        alt={producto.name}
                         fill
                         sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
                         className="object-cover transition-transform duration-300 group-hover:scale-105"
-                        data-ai-hint={producto.aiHint}
+                        data-ai-hint={producto.aiHint || producto.category.toLowerCase()}
                       />
                        <div className="absolute top-2 right-2 bg-background/80 backdrop-blur-sm px-2 py-1 rounded-md text-xs flex items-center shadow">
-                          {getCategoryIcon(producto.categoria)}
-                          {categoriesList.find(c => c.value === producto.categoria)?.label || producto.categoria}
+                          {getCategoryIcon(producto.category)}
+                          {categoriesList.find(c => c.value.toLowerCase() === producto.category.toLowerCase())?.label || producto.category}
                       </div>
                     </div>
                     <CardHeader className="pb-2">
-                      <CardTitle className="text-lg font-semibold leading-tight line-clamp-2">{producto.nombre}</CardTitle>
+                      <CardTitle className="text-lg font-semibold leading-tight line-clamp-2">{producto.name}</CardTitle>
                       <CardDescription className="text-xs text-muted-foreground">
-                        {producto.material && `Material: ${producto.material}`}
-                        {producto.material && producto.presionMaxima && ' • '}
-                        {producto.presionMaxima && `P. Máx: ${producto.presionMaxima}`}
+                         {producto.measure && `Medida: ${producto.measure}`}
+                         {producto.measure && producto.brand && ' • '}
+                         {producto.brand && `Marca: ${producto.brand}`}
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="flex-grow">
-                      <p className="text-sm text-muted-foreground mb-2 line-clamp-3">{producto.descripcion}</p>
-                       {producto.precio && <p className="text-base font-semibold text-foreground">{producto.precio}</p>}
+                      <p className="text-sm text-muted-foreground mb-2 line-clamp-3">{producto.description}</p>
+                       <p className="text-base font-semibold text-foreground">{formatPrice(producto.price)}</p>
                     </CardContent>
                     <CardContent className="pt-0">
                       <Button variant="outline" className="w-full" disabled>Ver Detalles</Button>
@@ -209,8 +311,8 @@ function ProductosContent() {
                     <TableHead className="w-[80px]">Imagen</TableHead>
                     <TableHead>Nombre</TableHead>
                     <TableHead>Categoría</TableHead>
-                    <TableHead className="hidden md:table-cell">Material</TableHead>
-                    <TableHead className="hidden md:table-cell">P. Máxima</TableHead>
+                    <TableHead className="hidden md:table-cell">Marca</TableHead>
+                    <TableHead className="hidden md:table-cell">Medida</TableHead>
                     <TableHead>Precio</TableHead>
                     <TableHead className="text-right">Acciones</TableHead>
                   </TableRow>
@@ -220,24 +322,24 @@ function ProductosContent() {
                     <TableRow key={producto.id}>
                       <TableCell>
                         <Image 
-                          src={producto.imageUrl} 
-                          alt={producto.nombre} 
+                          src={producto.images[0] || 'https://picsum.photos/64/64'} // Fallback image
+                          alt={producto.name} 
                           width={64} 
                           height={64} 
                           className="rounded-md object-cover aspect-square"
-                          data-ai-hint={producto.aiHint}
+                          data-ai-hint={producto.aiHint || producto.category.toLowerCase()}
                         />
                       </TableCell>
-                      <TableCell className="font-medium">{producto.nombre}</TableCell>
+                      <TableCell className="font-medium">{producto.name}</TableCell>
                       <TableCell>
                         <div className="flex items-center">
-                         {getCategoryIcon(producto.categoria)}
-                         {categoriesList.find(c => c.value === producto.categoria)?.label || producto.categoria}
+                         {getCategoryIcon(producto.category)}
+                         {categoriesList.find(c => c.value.toLowerCase() === producto.category.toLowerCase())?.label || producto.category}
                         </div>
                         </TableCell>
-                      <TableCell className="hidden md:table-cell">{producto.material || 'N/A'}</TableCell>
-                      <TableCell className="hidden md:table-cell">{producto.presionMaxima || 'N/A'}</TableCell>
-                      <TableCell>{producto.precio || 'N/A'}</TableCell>
+                      <TableCell className="hidden md:table-cell">{producto.brand || 'N/A'}</TableCell>
+                      <TableCell className="hidden md:table-cell">{producto.measure || 'N/A'}</TableCell>
+                      <TableCell>{formatPrice(producto.price)}</TableCell>
                       <TableCell className="text-right">
                         <Button variant="outline" size="sm" disabled>Ver Detalles</Button>
                       </TableCell>
@@ -262,7 +364,7 @@ function ProductosContent() {
 export default function ProductosPage() {
   return (
     <Suspense fallback={
-      <div className="flex flex-col items-center justify-center h-screen">
+      <div className="flex flex-col items-center justify-center h-[calc(100vh-8rem)]">
         <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-primary"></div>
         <p className="mt-4 text-muted-foreground">Cargando productos...</p>
       </div>
