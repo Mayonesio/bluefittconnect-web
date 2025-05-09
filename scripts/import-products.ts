@@ -82,13 +82,13 @@ function parseDimensionData(dimensionString?: string): Array<{ label: string; va
 
 function transformProduct(jsonProduct: JsonProduct): FirestoreProduct {
   const imagesArray = jsonProduct.images
-    ? jsonProduct.images.split(',').map(img => `images/productImage/${img.trim().split('/').pop()}`).filter(img => img.endsWith('/') === false && img !== 'images/productImage/')
+    ? jsonProduct.images.split(',').map(img => `/images/productImage/${img.trim().split('/').pop()}`).filter(img => img.endsWith('/') === false && img !== '/images/productImage/')
     : [];
   const imagesRelatedArray = jsonProduct.imagerelated
-    ? jsonProduct.imagerelated.split(',').map(img => `images/productImage/${img.trim().split('/').pop()}`).filter(img => img.endsWith('/') === false && img !== 'images/productImage/')
+    ? jsonProduct.imagerelated.split(',').map(img => `/images/productImage/${img.trim().split('/').pop()}`).filter(img => img.endsWith('/') === false && img !== '/images/productImage/')
     : [];
   
-  const dimensionDataArray = parseDimensionData(jsonProduct.dimensiondata);
+ const dimensionDataArray = parseDimensionData(jsonProduct.dimensiondata);
 
   return {
     code: jsonProduct.code,
@@ -100,7 +100,7 @@ function transformProduct(jsonProduct: JsonProduct): FirestoreProduct {
     description: jsonProduct.description,
     category: jsonProduct.category.toLowerCase(),
     brand: jsonProduct.brand || '',
-    dimensionImage: jsonProduct.dimensionimage ? `images/productImage/${jsonProduct.dimensionimage.split('/').pop()}` : '',
+    dimensionImage: jsonProduct.dimensionimage ? `/images/productImage/${jsonProduct.dimensionimage.split('/').pop()}` : '',
     dimensionData: dimensionDataArray,
     images: imagesArray,
     imagesRelated: imagesRelatedArray,

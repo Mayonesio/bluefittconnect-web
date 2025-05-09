@@ -9,10 +9,10 @@
     "description": "Codo para sistemas hidráulicos, excelente para instalaciones agrícolas en interior, exterior y aplicaciones de campo hidráulico.",
     "category": "codo corto",
     "brand": "Bluefitt International",
-    "dimensionimage": "images/codotab.png",
+    "dimensionimage": "/images/productImage/codotab.png",
     "dimensiondata": "6 mm, 1/8\", 35 mm,24 mm,12 mm",
-    "images": "images/ch001c.png, images/codocottab.png, images/recomend.png, images/tuerca.png",
-    "imagerelated": "images/ch001c+b.png"
+    "images": "/images/productImage/ch001c.png, /images/productImage/codocottab.png, /images/productImage/recomend.png, /images/productImage/tuerca.png",
+    "imagerelated": "/images/productImage/ch001c+b.png"
   },
   {
     "code": "RAC-LAT-QR-002",
@@ -24,10 +24,10 @@
     "description": "Racor de enlace rápido fabricado en latón de alta calidad para conexiones seguras y duraderas en sistemas de riego.",
     "category": "Racor",
     "brand": "Bluefitt International",
-    "dimensionimage": "images/racor_dimensiones.png",
+    "dimensionimage": "/images/productImage/racor_dimensiones.png",
     "dimensiondata": "DN25, Presión Máx: 16 bar, Longitud: 50mm",
-    "images": "images/RAC-LAT-QR-002.png, images/racor_detalle.png",
-    "imagerelated": "images/racor_aplicacion.png"
+    "images": "/images/productImage/RAC-LAT-QR-002.png, /images/productImage/racor_detalle.png",
+    "imagerelated": "/images/productImage/racor_aplicacion.png"
   },
   {
     "code": "CAU-DIG-DN50-003",
@@ -39,9 +39,9 @@
     "description": "Caudalímetro digital de tipo turbina para medición precisa del flujo de agua en tuberías de DN50. Display LCD.",
     "category": "Caudalímetro",
     "brand": "Bluefitt Tech",
-    "dimensionimage": "images/caudalimetro_esquema.png",
+    "dimensionimage": "/images/productImage/caudalimetro_esquema.png",
     "dimensiondata": "DN50, Rango: 1-60 m³/h, Precisión: ±1%",
-    "images": "images/CAU-DIG-DN50-003.png",
+    "images": "/images/productImage/CAU-DIG-DN50-003.png",
     "imagerelated": ""
   },
   {
@@ -56,7 +56,7 @@
     "brand": "Bluefitt Industrial",
     "dimensionimage": "",
     "dimensiondata": "DN100, PN16, Cuerpo: Hierro Fundido, Disco: Acero Inox",
-    "images": "images/VM-HF-DN100-004.png, images/valvula_detalle.png",
-    "imagerelated": "images/valvula_instalada.png"
+    "images": "/images/productImage/VM-HF-DN100-004.png, /images/productImage/valvula_detalle.png",
+    "imagerelated": "/images/productImage/valvula_instalada.png"
   }
 ]
