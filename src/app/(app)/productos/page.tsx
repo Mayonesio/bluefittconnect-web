@@ -4,7 +4,7 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Image from 'next/image';
-import { PlusCircle, Search, Filter, SlidersHorizontal, Puzzle, Gauge } from 'lucide-react';
+import { PlusCircle, Search, Filter, SlidersHorizontal, Puzzle, Gauge, LayoutGrid, List } from 'lucide-react';
 import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
@@ -14,9 +14,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import React, { useState, useMemo, useEffect, Suspense } from "react"; // Ensure Suspense is imported
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import React, { useState, useMemo, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useAuth } from "@/contexts/auth-context";
+import { cn } from "@/lib/utils";
 
 interface Producto {
   id: string;
@@ -45,6 +47,8 @@ const categoriesList: { value: Producto['categoria'], label: string }[] = [
     { value: 'Caudalímetro', label: 'Caudalímetros' },
 ];
 
+type ViewMode = 'grid' | 'list';
+
 function ProductosContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -52,6 +56,7 @@ function ProductosContent() {
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [viewMode, setViewMode] = useState<ViewMode>('grid');
 
   useEffect(() => {
     const initialCategory = searchParams.get('categoria');
@@ -149,45 +154,98 @@ function ProductosContent() {
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
+            <div className="flex items-center gap-2">
+              <Button variant={viewMode === 'grid' ? 'secondary' : 'outline'} size="icon" onClick={() => setViewMode('grid')} title="Vista de cuadrícula">
+                <LayoutGrid className="h-4 w-4" />
+              </Button>
+              <Button variant={viewMode === 'list' ? 'secondary' : 'outline'} size="icon" onClick={() => setViewMode('list')} title="Vista de lista">
+                <List className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
           {filteredProductos.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {filteredProductos.map((producto) => (
-                <Card key={producto.id} className="overflow-hidden flex flex-col group">
-                  <div className="relative w-full h-48">
-                    <Image
-                      src={producto.imageUrl}
-                      alt={producto.nombre}
-                      fill
-                      sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                      className="object-cover transition-transform duration-300 group-hover:scale-105"
-                      data-ai-hint={producto.aiHint}
-                    />
-                     <div className="absolute top-2 right-2 bg-background/80 backdrop-blur-sm px-2 py-1 rounded-md text-xs flex items-center shadow">
-                        {getCategoryIcon(producto.categoria)}
-                        {categoriesList.find(c => c.value === producto.categoria)?.label || producto.categoria}
+            viewMode === 'grid' ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {filteredProductos.map((producto) => (
+                  <Card key={producto.id} className="overflow-hidden flex flex-col group">
+                    <div className="relative w-full h-48">
+                      <Image
+                        src={producto.imageUrl}
+                        alt={producto.nombre}
+                        fill
+                        sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                        className="object-cover transition-transform duration-300 group-hover:scale-105"
+                        data-ai-hint={producto.aiHint}
+                      />
+                       <div className="absolute top-2 right-2 bg-background/80 backdrop-blur-sm px-2 py-1 rounded-md text-xs flex items-center shadow">
+                          {getCategoryIcon(producto.categoria)}
+                          {categoriesList.find(c => c.value === producto.categoria)?.label || producto.categoria}
+                      </div>
                     </div>
-                  </div>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-lg font-semibold leading-tight line-clamp-2">{producto.nombre}</CardTitle>
-                    <CardDescription className="text-xs text-muted-foreground">
-                      {producto.material && `Material: ${producto.material}`}
-                      {producto.material && producto.presionMaxima && ' • '}
-                      {producto.presionMaxima && `P. Máx: ${producto.presionMaxima}`}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="flex-grow">
-                    <p className="text-sm text-muted-foreground mb-2 line-clamp-3">{producto.descripcion}</p>
-                     {producto.precio && <p className="text-base font-semibold text-foreground">{producto.precio}</p>}
-                  </CardContent>
-                  <CardContent className="pt-0">
-                    <Button variant="outline" className="w-full" disabled>Ver Detalles</Button>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-lg font-semibold leading-tight line-clamp-2">{producto.nombre}</CardTitle>
+                      <CardDescription className="text-xs text-muted-foreground">
+                        {producto.material && `Material: ${producto.material}`}
+                        {producto.material && producto.presionMaxima && ' • '}
+                        {producto.presionMaxima && `P. Máx: ${producto.presionMaxima}`}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="flex-grow">
+                      <p className="text-sm text-muted-foreground mb-2 line-clamp-3">{producto.descripcion}</p>
+                       {producto.precio && <p className="text-base font-semibold text-foreground">{producto.precio}</p>}
+                    </CardContent>
+                    <CardContent className="pt-0">
+                      <Button variant="outline" className="w-full" disabled>Ver Detalles</Button>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : ( // List view
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[80px]">Imagen</TableHead>
+                    <TableHead>Nombre</TableHead>
+                    <TableHead>Categoría</TableHead>
+                    <TableHead className="hidden md:table-cell">Material</TableHead>
+                    <TableHead className="hidden md:table-cell">P. Máxima</TableHead>
+                    <TableHead>Precio</TableHead>
+                    <TableHead className="text-right">Acciones</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredProductos.map((producto) => (
+                    <TableRow key={producto.id}>
+                      <TableCell>
+                        <Image 
+                          src={producto.imageUrl} 
+                          alt={producto.nombre} 
+                          width={64} 
+                          height={64} 
+                          className="rounded-md object-cover aspect-square"
+                          data-ai-hint={producto.aiHint}
+                        />
+                      </TableCell>
+                      <TableCell className="font-medium">{producto.nombre}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center">
+                         {getCategoryIcon(producto.categoria)}
+                         {categoriesList.find(c => c.value === producto.categoria)?.label || producto.categoria}
+                        </div>
+                        </TableCell>
+                      <TableCell className="hidden md:table-cell">{producto.material || 'N/A'}</TableCell>
+                      <TableCell className="hidden md:table-cell">{producto.presionMaxima || 'N/A'}</TableCell>
+                      <TableCell>{producto.precio || 'N/A'}</TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="outline" size="sm" disabled>Ver Detalles</Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )
           ) : (
             <div className="flex flex-col items-center justify-center h-64 border-2 border-dashed rounded-md">
               <Search className="h-12 w-12 text-muted-foreground mb-4" />
