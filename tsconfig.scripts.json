@@ -1,0 +1,18 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "commonjs",
+    "outDir": "dist/scripts", // Optional: if you want to compile scripts separately
+    "noEmit": false, // Scripts need to be emitted or run directly by ts-node
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true // Important for reading JSON files
+  },
+  "include": [
+    "scripts/**/*.ts" // Specify files to be included for script compilation/execution
+  ],
+  "exclude": [
+    "node_modules",
+    "src" // Exclude main app source if not needed for scripts
+  ]
+}
